@@ -1,4 +1,3 @@
-import { Box, Text } from "ink";
 import type { ReactNode } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
@@ -24,7 +23,7 @@ export const Card = ({
   footer,
   borderColor,
   width,
-  borderStyle = "round",
+  borderStyle = "rounded",
   paddingX = 1,
   paddingY = 0,
   footerDividerChar = "─",
@@ -33,37 +32,33 @@ export const Card = ({
   const resolvedBorderColor = borderColor ?? theme.colors.border;
 
   return (
-    <Box
+    <box
       flexDirection="column"
-      borderStyle={borderStyle}
       borderColor={resolvedBorderColor}
-      width={width}
-      paddingX={paddingX}
-      paddingY={paddingY}
+      paddingLeft={paddingX}
+      paddingRight={paddingX}
+      paddingTop={paddingY}
+      paddingBottom={paddingY}
     >
       {(title || subtitle) && (
-        <Box flexDirection="column" paddingBottom={1}>
+        <box flexDirection="column" paddingBottom={1}>
           {title && (
-            <Text bold color={theme.colors.foreground}>
-              {title}
-            </Text>
+            <text fg={theme.colors.foreground}>
+              <b>{title}</b>
+            </text>
           )}
           {subtitle && (
-            <Text dimColor color={theme.colors.mutedForeground}>
-              {subtitle}
-            </Text>
+            <text fg={theme.colors.mutedForeground}>{subtitle}</text>
           )}
-        </Box>
+        </box>
       )}
-      <Box flexDirection="column">{children}</Box>
+      <box flexDirection="column">{children}</box>
       {footer && (
-        <Box flexDirection="column" marginTop={1} paddingTop={1}>
-          <Text color={resolvedBorderColor}>
-            {footerDividerChar.repeat(30)}
-          </Text>
-          <Box marginTop={0}>{footer}</Box>
-        </Box>
+        <box flexDirection="column" marginTop={1} paddingTop={1}>
+          <text fg={resolvedBorderColor}>{footerDividerChar.repeat(30)}</text>
+          <box marginTop={0}>{footer}</box>
+        </box>
       )}
-    </Box>
+    </box>
   );
 };

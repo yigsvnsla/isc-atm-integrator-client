@@ -1,10 +1,10 @@
-import { render } from "ink";
-import { App } from "./app.js";
-import { ThemeProvider } from "@/components/ui/theme-provider";
-import { draculaTheme } from "@/lib/terminal-themes/dracula";
+import "@opentui/react/runtime-plugin-support"
 
-render(
-  <ThemeProvider theme={draculaTheme}>
-    <App />
-  </ThemeProvider>,
-);
+import { createCliRenderer } from "@opentui/core"
+import { createRoot } from "@opentui/react"
+import { App } from "./app.js"
+
+const renderer = await createCliRenderer({ exitOnCtrlC: true })
+const root = createRoot(renderer)
+
+root.render(<App />)

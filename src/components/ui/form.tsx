@@ -1,15 +1,18 @@
-import { Box, Text } from "ink";
+import { useRenderer } from "@opentui/react";
+import type { KeyEvent } from "@opentui/core";
 import {
+  createElement,
   useState,
   useCallback,
   useMemo,
+  useRef,
+  useEffect,
   createContext,
   useContext,
 } from "react";
 import type { ReactNode } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
-import { useInput } from "@/hooks/use-input";
 
 interface FormContextValue {
   values: Record<string, unknown>;
@@ -20,9 +23,7 @@ interface FormContextValue {
 }
 
 const FormContext = createContext<FormContextValue>({
-  errors: {
-    /* noop */
-  },
+  errors: {},
   isDirty: false,
   setFieldError: () => {
     /* noop */
@@ -30,9 +31,7 @@ const FormContext = createContext<FormContextValue>({
   setFieldValue: () => {
     /* noop */
   },
-  values: {
-    /* noop */
-  },
+  values: {},
 });
 
 export const useFormContext = () => useContext(FormContext);
@@ -51,17 +50,13 @@ export interface FormProps {
 
 export const Form = ({
   onSubmit,
-  initialValues = {
-    /* noop */
-  },
+  initialValues = {},
   fields = [],
   children,
 }: FormProps) => {
   const theme = useTheme();
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
-  const [errors, setErrors] = useState<Record<string, string>>({
-    /* noop */
-  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
 
   const setFieldValue = useCallback((name: string, value: unknown) => {
@@ -73,38 +68,46 @@ export const Form = ({
     setErrors((e) => ({ ...e, [name]: error }));
   }, []);
 
-  useInput((input, key) => {
-    if (key.ctrl && input === "s") {
-      const newErrors: Record<string, string> = {
-        /* noop */
-      };
-      for (const field of fields) {
-        const err = field.validate ? field.validate(values[field.name]) : null;
-        if (err) {
-          newErrors[field.name] = err;
+  const stateRef = useRef({ values, fields, onSubmit, setErrors });
+  stateRef.current = { values, fields, onSubmit, setErrors };
+
+  const renderer = useRenderer();
+
+  useEffect(() => {
+    const handler = (key: KeyEvent) => {
+      if (key.ctrl && key.name === "s") {
+        const st = stateRef.current;
+        const newErrors: Record<string, string> = {};
+        for (const field of st.fields) {
+          const err = field.validate ? field.validate(st.values[field.name]) : null;
+          if (err) {
+            newErrors[field.name] = err;
+          }
         }
+        if (Object.keys(newErrors).length > 0) {
+          st.setErrors(newErrors);
+          return;
+        }
+        st.onSubmit?.(st.values);
       }
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
-      onSubmit?.(values);
-    }
-  });
+    };
+    renderer.keyInput.on("keypress", handler);
+    return () => {
+      renderer.keyInput.off("keypress", handler);
+    };
+  }, [renderer]);
 
   const contextValue = useMemo(
     () => ({ errors, isDirty, setFieldError, setFieldValue, values }),
     [errors, isDirty, setFieldError, setFieldValue, values]
   );
 
-  return (
-    <FormContext.Provider value={contextValue}>
-      <Box flexDirection="column" gap={1}>
-        {children}
-        <Text color={theme.colors.mutedForeground} dimColor>
-          Press Ctrl+S to submit
-        </Text>
-      </Box>
-    </FormContext.Provider>
+  return createElement(
+    FormContext.Provider,
+    { value: contextValue },
+    <box flexDirection="column" gap={1}>
+      {children}
+      <text fg="#666">Press Ctrl+S to submit</text>
+    </box>
   );
 };

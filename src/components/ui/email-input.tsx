@@ -1,9 +1,7 @@
-import { Box, Text } from "ink";
-import React, { useState } from "react";
+import { useKeyboard } from "@opentui/react";
+import { useState } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
-import { useFocus } from "@/hooks/use-focus";
-import { useInput } from "@/hooks/use-input";
 
 export interface EmailInputProps {
   value?: string;
@@ -46,15 +44,15 @@ export const EmailInput = ({
   onSubmit,
   label,
   placeholder = "you@example.com",
-  autoFocus = false,
-  id,
+  autoFocus: _autoFocus = false,
+  id: _id,
   width = 40,
   suggestions = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"],
 }: EmailInputProps) => {
   const [internalValue, setInternalValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
-  const { isFocused } = useFocus({ autoFocus, id });
+  const [isFocused] = useState(true);
 
   const value = controlledValue ?? internalValue;
 
@@ -84,12 +82,11 @@ export const EmailInput = ({
     return match.slice(afterAt.length);
   };
 
-  useInput((input, key) => {
+  useKeyboard((key) => {
     if (!isFocused) {
       return;
     }
-
-    if (key.return) {
+    if (key.name === "return") {
       if (!isValidEmail(value)) {
         setError("Please enter a valid email address");
         return;
@@ -98,8 +95,7 @@ export const EmailInput = ({
       onSubmit?.(value);
       return;
     }
-
-    if (key.tab) {
+    if (key.name === "tab") {
       const hint = getSuggestion(value);
       if (hint) {
         const newVal = value + hint;
@@ -107,21 +103,20 @@ export const EmailInput = ({
       }
       return;
     }
-
-    if (key.backspace || key.delete) {
+    if (key.name === "backspace" || key.name === "delete") {
       setError(null);
       const newVal = value.slice(0, -1);
       applyChange(newVal);
       return;
     }
-
-    if (key.escape || key.upArrow || key.downArrow) {
+    if (key.name === "escape" || key.name === "up" || key.name === "down") {
       return;
     }
-
-    setError(null);
-    const newVal = value + input;
-    applyChange(newVal);
+    if (key.name.length === 1) {
+      setError(null);
+      const newVal = value + key.name;
+      applyChange(newVal);
+    }
   });
 
   const borderColor = getBorderColor(error, isFocused, theme);
@@ -129,33 +124,29 @@ export const EmailInput = ({
   const suggestion = getSuggestion(value);
 
   return (
-    <Box flexDirection="column">
-      {label && <Text bold>{label}</Text>}
-      <Box
-        borderStyle="round"
-        borderColor={borderColor}
-        width={width}
-        paddingX={1}
-      >
-        <Text
-          color={value ? theme.colors.foreground : theme.colors.mutedForeground}
+    <box flexDirection="column">
+      {label && (
+        <text>
+          <b>{label}</b>
+        </text>
+      )}
+      <box borderStyle="rounded" paddingLeft={1} paddingRight={1}>
+        <text
+          fg={value ? theme.colors.foreground : theme.colors.mutedForeground}
         >
           {value || placeholder}
-        </Text>
-        {isFocused && suggestion && (
-          <Text color={theme.colors.mutedForeground} dimColor>
-            {suggestion}
-          </Text>
-        )}
-        {isFocused && <Text color={theme.colors.focusRing}>█</Text>}
-      </Box>
-      {error && <Text color={theme.colors.error}>{error}</Text>}
+        </text>
+        {isFocused && suggestion && <text fg="#666">{suggestion}</text>}
+        {isFocused && <text fg={theme.colors.focusRing}>█</text>}
+      </box>
+      {error && <text fg={theme.colors.error}>{error}</text>}
       {isFocused && suggestion && (
-        <Text color={theme.colors.mutedForeground} dimColor>
-          Tab to complete: {value}
+        <text fg="#666">
+          {"Tab to complete:"}
+          {value}
           {suggestion}
-        </Text>
+        </text>
       )}
-    </Box>
+    </box>
   );
 };

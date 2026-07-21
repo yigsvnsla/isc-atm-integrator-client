@@ -1,4 +1,3 @@
-import { Box } from "ink";
 import type { ReactNode } from "react";
 
 export interface CenterProps {
@@ -13,12 +12,12 @@ export const Center = ({ children, axis = "both" }: CenterProps) => {
     axis === "both" || axis === "vertical" ? "center" : undefined;
 
   return (
-    <Box
+    <box
       flexGrow={1}
       justifyContent={justifyContent as "center" | undefined}
       alignItems={alignItems as "center" | undefined}
     >
       {children}
-    </Box>
+    </box>
   );
 };

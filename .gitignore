@@ -4,3 +4,7 @@ node_modules
 .token
 .tmp
 .temp
+opentui-examples
+.vscode/
+skills-lock.json
+.agents/

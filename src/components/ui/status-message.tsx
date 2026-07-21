@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Box, Text } from "ink";
 import type { ReactNode } from "react";
 

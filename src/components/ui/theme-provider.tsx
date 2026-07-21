@@ -73,18 +73,25 @@ export const UnicodeContext = React.createContext<UnicodeContextValue>({
   unicode: !isNoUnicode(),
 });
 
+const defaultThemeForContext = defaultTheme;
+
+export const ThemeContext = React.createContext<ThemeContextValue>({
+  setTheme: () => {
+    /* noop */
+  },
+  theme: defaultThemeForContext,
+});
+
 export const useMotion = (): MotionContextValue =>
   React.useContext(MotionContext);
 
 export const useUnicode = (): boolean =>
   React.useContext(UnicodeContext).unicode;
 
-export const ThemeContext = React.createContext<ThemeContextValue>({
-  setTheme: () => {
-    /* noop */
-  },
-  theme: defaultTheme,
-});
+export const useTheme = (): Theme => React.useContext(ThemeContext).theme;
+
+export const useThemeUpdater = (): ((theme: Theme) => void) =>
+  React.useContext(ThemeContext).setTheme;
 
 export const detectColorScheme = (): "dark" | "light" => {
   const colorFgBg = getEnv("COLORFGBG");
@@ -159,11 +166,6 @@ export const AutoThemeProvider = ({
     </ThemeProvider>
   );
 };
-
-export const useTheme = (): Theme => React.useContext(ThemeContext).theme;
-
-export const useThemeUpdater = (): ((theme: Theme) => void) =>
-  React.useContext(ThemeContext).setTheme;
 
 export const createTheme = (
   overrides: Partial<Theme> & { name: string }

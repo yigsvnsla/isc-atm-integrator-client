@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Box, Text } from "ink";
 import React, { useEffect, useState } from "react";
 

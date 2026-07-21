@@ -1,4 +1,3 @@
-import { Box, Text } from "ink";
 import type { ReactNode } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
@@ -30,56 +29,58 @@ export const Heading = ({
   switch (level) {
     case 1: {
       return (
-        <Box>
-          <Text color={resolvedColor} bold>
-            {prefix1}
-          </Text>
-          <Text color={resolvedColor} bold>
-            {uppercase && typeof children === "string"
-              ? children.toUpperCase()
-              : children}
-          </Text>
-        </Box>
+        <box>
+          <text fg={resolvedColor}>
+            <b>{prefix1}</b>
+          </text>
+          <text fg={resolvedColor}>
+            <b>
+              {uppercase && typeof children === "string"
+                ? children.toUpperCase()
+                : children}
+            </b>
+          </text>
+        </box>
       );
     }
-
     case 2: {
       return (
-        <Box>
-          <Text color={resolvedColor} bold>
-            {prefix2}
-          </Text>
-          <Text color={resolvedColor} bold>
-            {children}
-          </Text>
-        </Box>
+        <box>
+          <text fg={resolvedColor}>
+            <b>{prefix2}</b>
+          </text>
+          <text fg={resolvedColor}>
+            <b>{children}</b>
+          </text>
+        </box>
       );
     }
-
     case 3: {
       return (
-        <Box>
-          <Text bold>{prefix3}</Text>
-          <Text bold>{children}</Text>
-        </Box>
+        <box>
+          <text>
+            <b>{prefix3}</b>
+          </text>
+          <text>
+            <b>{children}</b>
+          </text>
+        </box>
       );
     }
-
     case 4: {
       return (
-        <Box>
-          <Text underline dimColor>
-            {children}
-          </Text>
-        </Box>
+        <box>
+          <text fg="#666">
+            <u>{children}</u>
+          </text>
+        </box>
       );
     }
-
     default: {
       return (
-        <Box>
-          <Text>{children}</Text>
-        </Box>
+        <box>
+          <text>{children}</text>
+        </box>
       );
     }
   }

@@ -1,5 +1,3 @@
-import { Box, Text } from "ink";
-
 import { useTheme } from "@/components/ui/theme-provider";
 
 export interface DividerProps {
@@ -40,65 +38,42 @@ export const Divider = ({
   if (orientation === "vertical") {
     const lines = Array.from({ length: height }, (_, i) => i);
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {lines.map((i) => (
-          <Text key={i} color={resolvedColor}>
+          <text key={i} fg={resolvedColor}>
             {vChar}
-          </Text>
+          </text>
         ))}
-      </Box>
+      </box>
     );
   }
 
   const paddingStr = "".repeat(padding);
   const titlePad = "".repeat(titlePadding);
+  const hrAttrs = {
+    flexGrow: 1,
+    border: ["top"] as const,
+    borderStyle: "single" as const,
+    borderColor: resolvedColor,
+  } as const;
 
   if (label) {
     const resolvedLabelColor = labelColor ?? resolvedColor;
     return (
-      <Box flexDirection="row" width={width === "auto" ? undefined : width}>
-        {padding > 0 && <Text>{paddingStr}</Text>}
-        <Box
-          flexGrow={1}
-          borderStyle="single"
-          borderColor={resolvedColor}
-          borderBottom={false}
-          borderLeft={false}
-          borderRight={false}
-          borderTop
-        />
-        <Text color={resolvedLabelColor}>
-          {titlePad}
-          {label}
-          {titlePad}
-        </Text>
-        <Box
-          flexGrow={1}
-          borderStyle="single"
-          borderColor={resolvedColor}
-          borderBottom={false}
-          borderLeft={false}
-          borderRight={false}
-          borderTop
-        />
-        {padding > 0 && <Text>{paddingStr}</Text>}
-      </Box>
+      <box flexDirection="row" width={width === "auto" ? undefined : width}>
+        {padding > 0 && <text>{paddingStr}</text>}
+        <box flexGrow={1} borderStyle="single" borderColor={resolvedColor} border={["top"]} />
+        <text fg={resolvedLabelColor}>{`${titlePad}${label}${titlePad}`}</text>
+        <box flexGrow={1} borderStyle="single" borderColor={resolvedColor} border={["top"]} />
+        {padding > 0 && <text>{paddingStr}</text>}
+      </box>
     );
   }
 
   return (
-    <Box flexDirection="row" width={width === "auto" ? undefined : width}>
-      {padding > 0 && <Text>{paddingStr}</Text>}
-      <Box
-        flexGrow={1}
-        borderStyle="single"
-        borderColor={resolvedColor}
-        borderBottom={false}
-        borderLeft={false}
-        borderRight={false}
-        borderTop
-      />
-      {padding > 0 && <Text>{paddingStr}</Text>}
-    </Box>
+    <box flexDirection="row" width={width === "auto" ? undefined : width}>
+      {padding > 0 && <text>{paddingStr}</text>}
+      <box flexGrow={1} borderStyle="single" borderColor={resolvedColor} border={["top"]} />
+    </box>
   );
 };

@@ -1,5 +1,3 @@
-import { Box, Text } from "ink";
-
 import { useTheme } from "@/components/ui/theme-provider";
 
 export type BigTextFont = "block" | "simple" | "shade" | "slim";
@@ -11,7 +9,7 @@ export interface BigTextProps {
 }
 
 const FONT: Record<string, number[][]> = {
-  " ": [
+  "": [
     [0, 0, 0],
     [0, 0, 0],
     [0, 0, 0],
@@ -308,47 +306,47 @@ const FONT: Record<string, number[][]> = {
 };
 
 const SLIM_FONT: Record<string, string[]> = {
-  " ": ["   ", "   ", "   "],
+  "": ["", "", ""],
   "!": ["║", "║", "╩"],
-  "-": ["   ", "═══", "   "],
-  ".": ["  ", "  ", "╩ "],
-  "0": ["╔═╗", "║ ║", "╚═╝"],
-  "1": ["╗  ", "║  ", "╩  "],
+  "-": ["", "═══", ""],
+  ".": ["", "", "╩"],
+  "0": ["╔═╗", "║", "╚═╝"],
+  "1": ["╗", "║", "╩"],
   "2": ["══╗", "╔═╝", "╚══"],
-  "3": ["══╗", " ═╣", "══╝"],
-  "4": ["╦ ╦", "╚═╣", "  ╩"],
+  "3": ["══╗", "═╣", "══╝"],
+  "4": ["╦", "╚═╣", "╩"],
   "5": ["╔══", "╚═╗", "══╝"],
   "6": ["╔══", "╠═╗", "╚═╝"],
-  "7": ["══╗", "  ║", "  ╩"],
+  "7": ["══╗", "║", "╩"],
   "8": ["╔═╗", "╠═╣", "╚═╝"],
   "9": ["╔═╗", "╚═╣", "══╝"],
-  ":": [" ", "╥", "╨"],
-  "?": ["╔═╗", " ╔╝", " ╩ "],
-  A: ["╔═╗", "╠═╣", "╩ ╩"],
-  B: ["╔╗ ", "╠╩╗", "╚═╝"],
-  C: ["╔═╗", "║  ", "╚═╝"],
-  D: ["╔╗ ", "║ ║", "╚═╝"],
-  E: ["╔══", "╠═ ", "╚══"],
-  F: ["╔══", "╠═ ", "╩  "],
+  ":": ["", "╥", "╨"],
+  "?": ["╔═╗", "╔╝", "╩"],
+  A: ["╔═╗", "╠═╣", "╩"],
+  B: ["╔╗", "╠╩╗", "╚═╝"],
+  C: ["╔═╗", "║", "╚═╝"],
+  D: ["╔╗", "║", "╚═╝"],
+  E: ["╔══", "╠═", "╚══"],
+  F: ["╔══", "╠═", "╩"],
   G: ["╔═╗", "║ ╦", "╚═╝"],
-  H: ["╦ ╦", "╠═╣", "╩ ╩"],
+  H: ["╦", "╠═╣", "╩"],
   I: ["╦", "║", "╩"],
-  J: ["  ╦", "  ║", "╚═╝"],
-  K: ["╦╔╝", "╠╩╗", "╩ ╩"],
-  L: ["╦  ", "║  ", "╚══"],
-  M: ["╔╦╗", "║║║", "╩ ╩"],
+  J: ["╦", "║", "╚═╝"],
+  K: ["╦╔╝", "╠╩╗", "╩"],
+  L: ["╦", "║", "╚══"],
+  M: ["╔╦╗", "║║║", "╩"],
   N: ["╔╗╗", "║║║", "╩╚╝"],
-  O: ["╔═╗", "║ ║", "╚═╝"],
-  P: ["╔═╗", "╠═╝", "╩  "],
-  Q: ["╔═╗", "║ ║", "╚╦╝"],
+  O: ["╔═╗", "║", "╚═╝"],
+  P: ["╔═╗", "╠═╝", "╩"],
+  Q: ["╔═╗", "║", "╚╦╝"],
   R: ["╔═╗", "╠╦╝", "╩╚╗"],
   S: ["╔═╗", "╚═╗", "╚═╝"],
-  T: ["═╦═", " ║ ", " ╩ "],
-  U: ["╦ ╦", "║ ║", "╚═╝"],
-  V: ["╦ ╦", "╚╦╝", " ╩ "],
-  W: ["╦ ╦", "║║║", "╚╩╝"],
-  X: ["╦ ╦", " ╬ ", "╩ ╩"],
-  Y: ["╦ ╦", " ╦ ", " ╩ "],
+  T: ["═╦═", "║", "╩"],
+  U: ["╦", "║", "╚═╝"],
+  V: ["╦", "╚╦╝", "╩"],
+  W: ["╦", "║║║", "╚╩╝"],
+  X: ["╦", "╬", "╩"],
+  Y: ["╦", "╦", "╩"],
   Z: ["══╦", "╔═╝", "╚══"],
 };
 
@@ -366,7 +364,7 @@ const getCharRows = (ch: string): number[][] => {
 };
 
 const SHADE_CHARS: Record<number, string> = {
-  0: " ",
+  0: "",
   1: "░",
   2: "▒",
   3: "▓",
@@ -374,7 +372,7 @@ const SHADE_CHARS: Record<number, string> = {
 };
 
 const renderShadeRow = (row: number[]): string =>
-  row.map((p) => (p ? (SHADE_CHARS[3] ?? "▓") : " ")).join("");
+  row.map((p) => (p ? (SHADE_CHARS[3] ?? "▓") : "")).join("");
 
 export const BigText = ({ children, color, font = "block" }: BigTextProps) => {
   const theme = useTheme();
@@ -385,22 +383,18 @@ export const BigText = ({ children, color, font = "block" }: BigTextProps) => {
   if (font === "slim") {
     const rowCount = 3;
     return (
-      <Box flexDirection="column">
+      <box flexDirection="column">
         {Array.from({ length: rowCount }, (_, rowIdx) => (
-          <Box key={rowIdx} flexDirection="row">
+          <box key={rowIdx} flexDirection="row">
             {chars.map((ch, charIdx) => {
               const upper = ch.toUpperCase();
               const slimChar = SLIM_FONT[upper] ?? SLIM_FONT[ch];
-              const line = slimChar ? (slimChar[rowIdx] ?? "   ") : "   ";
-              return (
-                <Text key={charIdx} color={resolvedColor}>
-                  {`${line} `}
-                </Text>
-              );
+              const line = slimChar ? (slimChar[rowIdx] ?? "") : "";
+              return <text key={charIdx} fg={resolvedColor}>{`${line} `}</text>;
             })}
-          </Box>
+          </box>
         ))}
-      </Box>
+      </box>
     );
   }
 
@@ -408,13 +402,13 @@ export const BigText = ({ children, color, font = "block" }: BigTextProps) => {
   if (font === "block") {
     onChar = "█";
   }
-  const offChar = " ";
+  const offChar = "";
   const rows = 5;
 
   return (
-    <Box flexDirection="column">
+    <box flexDirection="column">
       {Array.from({ length: rows }, (_, rowIdx) => (
-        <Box key={rowIdx} flexDirection="row">
+        <box key={rowIdx} flexDirection="row">
           {chars.map((ch, charIdx) => {
             const charRows = getCharRows(ch);
             const row = charRows[rowIdx] ?? [0, 0, 0];
@@ -422,14 +416,10 @@ export const BigText = ({ children, color, font = "block" }: BigTextProps) => {
               font === "shade"
                 ? renderShadeRow(row)
                 : row.map((pixel) => (pixel ? onChar : offChar)).join("");
-            return (
-              <Text key={charIdx} color={resolvedColor}>
-                {`${rowStr} `}
-              </Text>
-            );
+            return <text key={charIdx} fg={resolvedColor}>{`${rowStr} `}</text>;
           })}
-        </Box>
+        </box>
       ))}
-    </Box>
+    </box>
   );
 };

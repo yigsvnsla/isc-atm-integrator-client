@@ -1,8 +1,7 @@
-import { Box, Text } from "ink";
-import React, { useState } from "react";
+import { useKeyboard } from "@opentui/react";
+import { useState } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
-import { useInput } from "@/hooks/use-input";
 
 export interface SelectOption<T = string> {
   value: T;
@@ -35,8 +34,8 @@ export const Select = <T = string,>({
 
   const resolvedCursorColor = cursorColor ?? theme.colors.primary;
 
-  useInput((input, key) => {
-    if (key.upArrow) {
+  useKeyboard((key) => {
+    if (key.name === "up") {
       setActiveIndex((i) => {
         let next = i - 1;
         while (next >= 0 && options[next]?.disabled) {
@@ -44,7 +43,7 @@ export const Select = <T = string,>({
         }
         return next < 0 ? i : next;
       });
-    } else if (key.downArrow) {
+    } else if (key.name === "down") {
       setActiveIndex((i) => {
         let next = i + 1;
         while (next < options.length && options[next]?.disabled) {
@@ -52,7 +51,7 @@ export const Select = <T = string,>({
         }
         return next >= options.length ? i : next;
       });
-    } else if (key.return) {
+    } else if (key.name === "return") {
       const opt = options[activeIndex];
       if (opt && !opt.disabled) {
         onChange?.(opt.value);
@@ -62,13 +61,16 @@ export const Select = <T = string,>({
   });
 
   return (
-    <Box flexDirection="column">
-      {label && <Text bold>{label}</Text>}
+    <box flexDirection="column">
+      {label && (
+        <text>
+          <b>{label}</b>
+        </text>
+      )}
       {options.map((opt, idx) => {
         const isActive = idx === activeIndex;
         const isSelected =
           controlledValue !== undefined && opt.value === controlledValue;
-
         let optColor: string;
         if (opt.disabled) {
           optColor = theme.colors.mutedForeground;
@@ -77,27 +79,18 @@ export const Select = <T = string,>({
         } else {
           optColor = theme.colors.foreground;
         }
-
         return (
-          <Box key={idx} gap={1}>
-            <Text color={isActive ? resolvedCursorColor : undefined}>
+          <box key={idx} gap={1}>
+            <text fg={isActive ? resolvedCursorColor : undefined}>
               {isActive ? cursor : ""}
-            </Text>
-            <Text
-              color={optColor}
-              bold={isActive || isSelected}
-              dimColor={opt.disabled}
-            >
-              {opt.label}
-            </Text>
-            {opt.hint && (
-              <Text color={theme.colors.mutedForeground} dimColor>
-                {opt.hint}
-              </Text>
-            )}
-          </Box>
+            </text>
+            <text fg={opt.disabled ? "#666" : optColor}>
+              {isActive || isSelected ? <b>{opt.label}</b> : opt.label}
+            </text>
+            {opt.hint && <text fg="#666">{opt.hint}</text>}
+          </box>
         );
       })}
-    </Box>
+    </box>
   );
 };

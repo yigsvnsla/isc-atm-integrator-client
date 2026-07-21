@@ -4,7 +4,7 @@ export const draculaTheme: Theme = {
   border: {
     color: "#6272A4",
     focusColor: "#BD93F9",
-    style: "round",
+    style: "rounded",
   },
   colors: {
     accent: "#FF79C6",

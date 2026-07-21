@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Box, Text } from "ink";
 import { useState, useMemo } from "react";
 

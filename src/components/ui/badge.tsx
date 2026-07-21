@@ -1,5 +1,3 @@
-import { Box, Text } from "ink";
-
 import { useTheme } from "@/components/ui/theme-provider";
 import type { BorderStyle } from "@/components/ui/types";
 
@@ -27,7 +25,7 @@ export const Badge = ({
   color,
   bold = false,
   bordered = true,
-  borderStyle = "round",
+  borderStyle = "rounded",
   paddingX = 1,
 }: BadgeProps) => {
   const theme = useTheme();
@@ -57,23 +55,25 @@ export const Badge = ({
       }
     })();
 
+  const textContent = bold ? (
+    <text fg={variantColor}>
+      <b>{children}</b>
+    </text>
+  ) : (
+    <text fg={variantColor}>{children}</text>
+  );
+
   if (!bordered) {
-    return (
-      <Text color={variantColor} bold={bold}>
-        {children}
-      </Text>
-    );
+    return textContent;
   }
 
   return (
-    <Box
-      borderStyle={borderStyle}
+    <box
       borderColor={variantColor}
-      paddingX={paddingX}
+      paddingLeft={paddingX}
+      paddingRight={paddingX}
     >
-      <Text color={variantColor} bold={bold}>
-        {children}
-      </Text>
-    </Box>
+      {textContent}
+    </box>
   );
 };

@@ -1,8 +1,7 @@
-import { Box as InkBox } from "ink";
-import type { BoxProps as InkBoxProps } from "ink";
 import type { ReactNode } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
+import type { BorderStyle } from "@/components/ui/types";
 
 export type BorderVariant =
   | "default"
@@ -12,11 +11,37 @@ export type BorderVariant =
   | "error"
   | "warning";
 
-export interface BoxProps extends InkBoxProps {
+export interface BoxProps {
   border?: boolean;
   borderVariant?: BorderVariant;
   borderColor?: string;
+  borderStyle?: BorderStyle;
   children?: ReactNode;
+  flexDirection?: "row" | "column" | "row-reverse" | "column-reverse";
+  flexGrow?: number;
+  flexShrink?: number;
+  alignItems?: "flex-start" | "center" | "flex-end" | "stretch";
+  justifyContent?:
+    | "flex-start"
+    | "center"
+    | "flex-end"
+    | "space-between"
+    | "space-around"
+    | "space-evenly";
+  width?: number | string;
+  height?: number | string;
+  minWidth?: number;
+  minHeight?: number;
+  paddingLeft?: number;
+  paddingRight?: number;
+  paddingTop?: number;
+  paddingBottom?: number;
+  marginLeft?: number;
+  marginRight?: number;
+  marginTop?: number;
+  marginBottom?: number;
+  gap?: number;
+  [key: string]: unknown;
 }
 
 export const Box = ({
@@ -54,14 +79,13 @@ export const Box = ({
     })();
 
   return (
-    <InkBox
+    <box
       borderStyle={
         border ? (props.borderStyle ?? theme.border.style) : undefined
       }
       borderColor={border ? resolvedBorderColor : undefined}
-      {...props}
     >
       {children}
-    </InkBox>
+    </box>
   );
 };

@@ -1,140 +1,135 @@
-import React, { useState } from 'react';
-import { Text } from 'ink';
-import { Stack } from '@/components/ui/stack';
-import { Heading } from '@/components/ui/heading';
-import { TextInput } from '@/components/ui/text-input';
-import { Select } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
-import { StatusMessage } from '@/components/ui/status-message';
-import { api } from '../services/api.js';
+import { useState } from "react";
+import { Select } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert } from "@/components/ui/alert";
+import { api } from "../services/api.js";
 
-const OPERATIONS = ['withdrawal', 'deposit', 'transfer', 'balance_inquiry', 'pin_change', 'reversal', 'mini_statement'];
-const SOURCE_BANKS = ['bank_a', 'bank_b'];
-const TYPES = ['debit', 'credit'];
+const OPERATIONS = [
+  "withdrawal", "deposit", "transfer", "balance_inquiry",
+  "pin_change", "reversal", "mini_statement",
+];
+const SOURCE_BANKS = ["bank_a", "bank_b"];
+const TYPES = ["debit", "credit"];
 
-interface Fields {
-    account_id: string;
-    amount: string;
-    operation: string;
-    type: string;
-    source_bank: string;
-    description: string;
-}
+const fieldOrder = ["account_id", "amount", "operation", "type", "source_bank", "description"] as const;
 
-const fieldOrder: (keyof Fields)[] = ['account_id', 'amount', 'operation', 'type', 'source_bank', 'description'];
+type Field = (typeof fieldOrder)[number];
 
 export function CreateTransactionScreen() {
-    const [fields, setFields] = useState<Fields>({
-        account_id: '', amount: '', operation: 'withdrawal', type: 'debit', source_bank: 'bank_a', description: '',
-    });
-    const [step, setStep] = useState(0);
-    const [result, setResult] = useState('');
-    const [loading, setLoading] = useState(false);
+  const [fields, setFields] = useState<Record<Field, string>>({
+    account_id: "", amount: "", operation: "withdrawal",
+    type: "debit", source_bank: "bank_a", description: "",
+  });
+  const [step, setStep] = useState(0);
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const update = (key: keyof Fields) => (value: string) => {
-        setFields(f => ({ ...f, [key]: value }));
-    };
+  const update = (key: Field) => (v: string) => setFields((f) => ({ ...f, [key]: v }));
+  const advance = () => {
+    if (step < fieldOrder.length - 1) setStep(step + 1);
+  };
 
-    const advance = () => {
-        if (step < fieldOrder.length - 1) {
-            setStep(step + 1);
-        }
-    };
+  const submit = async () => {
+    setLoading(true);
+    try {
+      const body: Record<string, unknown> = {
+        account_id: fields.account_id,
+        amount: fields.amount ? parseInt(fields.amount) : undefined,
+        operation: fields.operation,
+        description: fields.description,
+        source_bank: fields.source_bank,
+      };
+      if (!["balance_inquiry", "pin_change", "mini_statement"].includes(fields.operation)) {
+        body.type = fields.type;
+      }
+      const res = await api<{ data: { id: string } }>("transactions", {
+        method: "POST",
+        body,
+      });
+      setResult(`Created: ${res.data.id}`);
+    } catch (e: unknown) {
+      setResult(`Error: ${(e as Error).message}`);
+    }
+    setLoading(false);
+  };
 
-    const submit = async () => {
-        setLoading(true);
-        try {
-            const body = {
-                account_id: fields.account_id,
-                amount: fields.amount ? parseInt(fields.amount) : undefined,
-                operation: fields.operation,
-                type: ['balance_inquiry', 'pin_change', 'mini_statement'].includes(fields.operation) ? undefined : fields.type,
-                description: fields.description,
-                source_bank: fields.source_bank,
-            };
-            const res = await api<{ data: { id: string } }>('transactions', { method: 'POST', body });
-            setResult(`Created: ${res.data.id}`);
-        } catch (e: unknown) {
-            setResult(`Error: ${(e as Error).message}`);
-        }
-        setLoading(false);
-    };
+  const handleSubmit = () => {
+    if (step < fieldOrder.length - 1) advance();
+    else submit();
+  };
 
-    const handleSubmit = () => {
-        if (step < fieldOrder.length - 1) {
-            advance();
-        } else {
-            submit();
-        }
-    };
+  const name = fieldOrder[step];
 
-    return (
-        <Stack direction="vertical" gap={1}>
-            <Heading level={3}>Create Transaction</Heading>
-            {step === 0 && (
-                <TextInput
-                    value={fields.account_id}
-                    onChange={update('account_id')}
-                    onSubmit={advance}
-                    autoFocus
-                    label="Account ID"
-                    placeholder="Enter account ID"
-                />
-            )}
-            {step === 1 && (
-                <TextInput
-                    value={fields.amount}
-                    onChange={update('amount')}
-                    onSubmit={advance}
-                    autoFocus
-                    label="Amount"
-                    placeholder="in cents"
-                />
-            )}
-            {step === 2 && (
-                <Select
-                    options={OPERATIONS.map(o => ({ value: o, label: o }))}
-                    value={fields.operation}
-                    onChange={update('operation')}
-                    onSubmit={advance}
-                    label="Operation"
-                />
-            )}
-            {step === 3 && (
-                <Select
-                    options={TYPES.map(t => ({ value: t, label: t }))}
-                    value={fields.type}
-                    onChange={update('type')}
-                    onSubmit={advance}
-                    label="Type"
-                />
-            )}
-            {step === 4 && (
-                <Select
-                    options={SOURCE_BANKS.map(b => ({ value: b, label: b }))}
-                    value={fields.source_bank}
-                    onChange={update('source_bank')}
-                    onSubmit={advance}
-                    label="Source Bank"
-                />
-            )}
-            {step === 5 && (
-                <TextInput
-                    value={fields.description}
-                    onChange={update('description')}
-                    onSubmit={handleSubmit}
-                    autoFocus
-                    label="Description"
-                    placeholder="Optional description"
-                />
-            )}
-            {loading && <Spinner label="Creating..." />}
-            {result && (
-                <StatusMessage variant={result.startsWith('Error') ? 'error' : 'success'}>
-                    {result}
-                </StatusMessage>
-            )}
-            <Text dimColor>Enter to confirm · Esc to cancel</Text>
-        </Stack>
-    );
+  return (
+    <box flexDirection="column" gap={1}>
+      <text><b>Create Transaction</b></text>
+      {name === "account_id" && (
+        <box flexDirection="column">
+          <text fg="#888"><b>Account ID</b></text>
+          <input
+            placeholder="Enter account ID"
+            onInput={update("account_id")}
+            onSubmit={advance}
+            value={fields.account_id}
+          />
+        </box>
+      )}
+      {name === "amount" && (
+        <box flexDirection="column">
+          <text fg="#888"><b>Amount</b></text>
+          <input
+            placeholder="in cents"
+            onInput={update("amount")}
+            onSubmit={advance}
+            value={fields.amount}
+          />
+        </box>
+      )}
+      {name === "operation" && (
+        <Select
+          options={OPERATIONS.map((o) => ({ value: o, label: o }))}
+          value={fields.operation}
+          onChange={update("operation")}
+          onSubmit={advance}
+          label="Operation"
+        />
+      )}
+      {name === "type" && (
+        <Select
+          options={TYPES.map((t) => ({ value: t, label: t }))}
+          value={fields.type}
+          onChange={update("type")}
+          onSubmit={advance}
+          label="Type"
+        />
+      )}
+      {name === "source_bank" && (
+        <Select
+          options={SOURCE_BANKS.map((b) => ({ value: b, label: b }))}
+          value={fields.source_bank}
+          onChange={update("source_bank")}
+          onSubmit={advance}
+          label="Source Bank"
+        />
+      )}
+      {name === "description" && (
+        <box flexDirection="column">
+          <text fg="#888"><b>Description</b></text>
+          <input
+            placeholder="Optional description"
+            onInput={update("description")}
+            onSubmit={handleSubmit}
+            value={fields.description}
+          />
+        </box>
+      )}
+      {loading && <Spinner label="Creating..." />}
+      {result && (
+        <Alert variant={result.startsWith("Error") ? "error" : "success"}>
+          {result}
+        </Alert>
+      )}
+      <text fg="#666">Enter to confirm · Esc to cancel</text>
+    </box>
+  );
 }

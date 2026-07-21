@@ -1,8 +1,7 @@
-import { Box, Text } from "ink";
-import React, { useState } from "react";
+import { useKeyboard } from "@opentui/react";
+import { useState } from "react";
 
 import { useTheme } from "@/components/ui/theme-provider";
-import { useInput } from "@/hooks/use-input";
 
 export interface PaginationProps {
   total: number;
@@ -47,7 +46,7 @@ export const Pagination = ({
   total,
   current,
   onChange,
-  showEdges = true,
+  showEdges: _showEdges = true,
   siblings = 1,
 }: PaginationProps) => {
   const theme = useTheme();
@@ -66,11 +65,11 @@ export const Pagination = ({
     }
   };
 
-  useInput((_input, key) => {
-    if (key.leftArrow) {
+  useKeyboard((key) => {
+    if (key.name === "left") {
       goTo(activePage - 1);
     }
-    if (key.rightArrow) {
+    if (key.name === "right") {
       goTo(activePage + 1);
     }
   });
@@ -78,50 +77,43 @@ export const Pagination = ({
   const pages = buildPages(total, activePage, siblings);
 
   return (
-    <Box flexDirection="row" alignItems="center" gap={1}>
-      <Text
-        color={
+    <box flexDirection="row" alignItems="center" gap={1}>
+      <text
+        fg={
           activePage === 1 ? theme.colors.mutedForeground : theme.colors.primary
         }
-        dimColor={activePage === 1}
       >
         ‹
-      </Text>
-
-      {showEdges && total > 7 ? null : null}
+      </text>
 
       {pages.map((p, idx) => {
         if (p === "...") {
           return (
-            <Text key={`ellipsis-${idx}`} color={theme.colors.mutedForeground}>
+            <text key={`ellipsis-${idx}`} fg={theme.colors.mutedForeground}>
               …
-            </Text>
+            </text>
           );
         }
         const isActive = p === activePage;
         return (
-          <Text
+          <text
             key={p}
-            color={
-              isActive ? theme.colors.primary : theme.colors.mutedForeground
-            }
-            bold={isActive}
+            fg={isActive ? theme.colors.primary : theme.colors.mutedForeground}
           >
-            {isActive ? `[${p}]` : `${p}`}
-          </Text>
+            {isActive ? <b>{`[${p}]`}</b> : `${p}`}
+          </text>
         );
       })}
 
-      <Text
-        color={
+      <text
+        fg={
           activePage === total
             ? theme.colors.mutedForeground
             : theme.colors.primary
         }
-        dimColor={activePage === total}
       >
         ›
-      </Text>
-    </Box>
+      </text>
+    </box>
   );
 };
