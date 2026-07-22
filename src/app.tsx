@@ -1,3 +1,4 @@
+
 // import { useState } from "react";
 // import { useKeyboard } from "@opentui/react";
 // import { Box } from "@/components/ui/box";
@@ -12,6 +13,8 @@
 // import { useAuth } from "./hooks/use-auth.js";
 
 import { RGBA } from "@opentui/core";
+import { useState } from "react";
+import { useCsrfToken } from "./hooks/use-get-crsf-token";
 
 // // type Screen = "login" | "dashboard" | "transactions" | "create" | "transfer" | "conciliation";
 
@@ -82,12 +85,65 @@ import { RGBA } from "@opentui/core";
 //   );
 // }
 
-export interface LoginFormState {
-  values: { email: string; password: string };
+export const FORM_STATE = {
+  IDLE: "idle",
+  LOADING: "loading",
+  SUCCESS: "success",
+  ERROR: "error",
+} as const;
 
+export type FormState = (typeof FORM_STATE)[keyof typeof FORM_STATE];
+
+export const FORM_EVENTS = {
+  SUBMIT: "submit",
+  RESOLVE: "resolve",
+  REJECT: "reject",
+};
+
+export type FormEvent = (typeof FORM_EVENTS)[keyof typeof FORM_EVENTS];
+
+export const FORM_STATE_MACHINE: Partial<{
+  [S in FormState]: Partial<{
+    [E in FormEvent]: FormState;
+  }>;
+}> = {
+  [FORM_STATE.IDLE]: {
+    [FORM_EVENTS.SUBMIT]: FORM_STATE.LOADING,
+  },
+  [FORM_STATE.LOADING]: {
+    [FORM_EVENTS.RESOLVE]: FORM_STATE.SUCCESS,
+    [FORM_EVENTS.REJECT]: FORM_STATE.ERROR,
+  },
+};
+
+export const transition = (state: FormState, event: FormEvent): FormState => {
+  if (!FORM_STATE_MACHINE[state] || !FORM_STATE_MACHINE[state][event]) {
+    return state;
+  }
+
+  return FORM_STATE_MACHINE[state][event];
+};
+
+export interface FormValue {
+  email: string;
+  password: string;
+}
+
+export interface LoginFormState<T> {
+  values: T;
+  state: FormState;
+  events: FormEvent;
 }
 
 export function App() {
+  const csrf = useCsrfToken();
+
+  const [formState, setFormState] = useState<FormState>(FORM_STATE.IDLE);
+
+  function handlerSubmit() {
+    setFormState(transition(formState, FORM_EVENTS.SUBMIT));
+  }
+
   return (
     <box
       title=" ISC ATM INTEGRATOR "
@@ -97,6 +153,7 @@ export function App() {
       justifyContent={"center"}
       alignItems={"center"}
     >
+      {/* <text>{JSON.stringify(csrf.value)}</text> */}
       <box
         // backgroundColor="#424297"
         borderStyle="rounded"
@@ -122,47 +179,38 @@ export function App() {
         </box>
         <text marginY={1}>SERVICIO DE INTEGRACION FINANCIERO</text>
 
-        <box flexDirection="row">
+        <box flexDirection="column">
           {/* --- email input --- */}
           <box flexDirection="column">
-            <box flexDirection="row" gap={1}>
-              <text fg={RGBA.fromHex("#2c62b3")}>
-                <b>e-mail</b>
-              </text>
-              <text fg={RGBA.fromHex("#df2121")}>*</text>
-            </box>
-            <box>
+            <box title=" Usuario " borderStyle="rounded" paddingX={1}>
               <input
                 id="styled-input"
                 width={30}
                 placeholder="Type here..."
-                backgroundColor="#1a1a1a"
-                focusedBackgroundColor="#2a2a2a"
                 textColor="#FFFFFF"
-                cursorColor="#00FF00"
               />
             </box>
+            <text marginX={1} fg={RGBA.fromHex("#df2121")}>
+              {"✗"} {"error message"}
+            </text>
           </box>
 
-
+          <box flexDirection="column">
+            <box title=" Contraseña " borderStyle="rounded" paddingX={1}>
+              <input
+                id="styled-input"
+                width={30}
+                placeholder="Type here..."
+                textColor="#FFFFFF"
+              />
+            </box>
+            <text marginX={1} fg={RGBA.fromHex("#df2121")}>
+              {"✗"} {"error message"}
+            </text>
+          </box>
         </box>
       </box>
     </box>
   );
 }
 
-// <box flexDirection="column">
-//   <box flexDirection="row" gap={0}>
-//     <text fg={RGBA.fromHex("#2c62b3")}>
-//       <b>{"QWERTY"}</b>
-//     </text>
-//     {true && <text fg={RGBA.fromHex("#df2121")}>{" *"}</text>}
-//   </box>
-//   <box>children</box>
-//   {true && !true && <text fg="#666">{true}</text>}
-//   {true && (
-//     <text fg={RGBA.fromHex("#df2121")}>
-//       {"✗"} {"error"}
-//     </text>
-//   )}
-// </box>
