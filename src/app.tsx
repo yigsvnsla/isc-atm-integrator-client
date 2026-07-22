@@ -1,4 +1,3 @@
-
 // import { useState } from "react";
 // import { useKeyboard } from "@opentui/react";
 // import { Box } from "@/components/ui/box";
@@ -13,8 +12,9 @@
 // import { useAuth } from "./hooks/use-auth.js";
 
 import { RGBA } from "@opentui/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCsrfToken } from "./hooks/use-get-crsf-token";
+import { useRenderer } from "@opentui/react";
 
 // // type Screen = "login" | "dashboard" | "transactions" | "create" | "transfer" | "conciliation";
 
@@ -116,6 +116,7 @@ export const FORM_STATE_MACHINE: Partial<{
   },
 };
 
+
 export const transition = (state: FormState, event: FormEvent): FormState => {
   if (!FORM_STATE_MACHINE[state] || !FORM_STATE_MACHINE[state][event]) {
     return state;
@@ -129,6 +130,15 @@ export interface FormValue {
   password: string;
 }
 
+const isValidEmail = (email: string): boolean => {
+  const atIdx = email.indexOf("@");
+  if (atIdx < 1) {
+    return false;
+  }
+  const domain = email.slice(atIdx + 1);
+  return domain.includes(".");
+};
+
 export interface LoginFormState<T> {
   values: T;
   state: FormState;
@@ -136,9 +146,19 @@ export interface LoginFormState<T> {
 }
 
 export function App() {
+  const renderer = useRenderer();
+
+  useEffect(() => {
+    renderer.console.show();
+    console.log("Hello from console!");
+  }, []);
+
   const csrf = useCsrfToken();
 
   const [formState, setFormState] = useState<FormState>(FORM_STATE.IDLE);
+
+
+  const [emailInputError, setEmailInputError] = useState<boolean>(false)
 
   function handlerSubmit() {
     setFormState(transition(formState, FORM_EVENTS.SUBMIT));
@@ -153,7 +173,8 @@ export function App() {
       justifyContent={"center"}
       alignItems={"center"}
     >
-      {/* <text>{JSON.stringify(csrf.value)}</text> */}
+      {csrf?.isSuccess && <text>{JSON.stringify(csrf.value)} {emailInputError}</text>}
+
       <box
         // backgroundColor="#424297"
         borderStyle="rounded"
@@ -169,7 +190,6 @@ export function App() {
             font="block"
             color={RGBA.fromHex("#df2121")}
           />
-
           <ascii-font
             id="title"
             text="NET"
@@ -177,21 +197,39 @@ export function App() {
             color={RGBA.fromHex("#2c62b3")}
           />
         </box>
-        <text marginY={1}>SERVICIO DE INTEGRACION FINANCIERO</text>
-
+        <box alignItems={"center"} marginY={1}>
+          <text>
+            <strong>SERVICIO DE INTEGRACION FINANCIERO</strong>
+          </text>
+          {csrf?.isFailed && (
+            <text bg={RGBA.fromHex("#df2121")}>{csrf.error.message}</text>
+          )}
+        </box>
         <box flexDirection="column">
           {/* --- email input --- */}
           <box flexDirection="column">
-            <box title=" Usuario " borderStyle="rounded" paddingX={1}>
-              <input
-                id="styled-input"
-                width={30}
-                placeholder="Type here..."
-                textColor="#FFFFFF"
-              />
+            <box
+              title=" Usuario "
+              borderStyle="rounded"
+              borderColor={csrf?.isFailed ? "#2a2a2a" : "#FFF"}
+              paddingX={1}
+            >
+              {csrf?.isFailed ? (
+                <text />
+              ) : (
+                <input
+                  id="styled-input"
+                  width={30}
+                  placeholder="Type here..."
+                  textColor="#FFFFFF"
+                  onInput={(value) => {
+                    setEmailInputError(!isValidEmail(value))
+                  }}
+                />
+              )}
             </box>
-            <text marginX={1} fg={RGBA.fromHex("#df2121")}>
-              {"✗"} {"error message"}
+            <text  marginX={1} fg={RGBA.fromHex("#df2121")}>
+              {(emailInputError && "✗ error message")}
             </text>
           </box>
 
@@ -213,4 +251,3 @@ export function App() {
     </box>
   );
 }
-
