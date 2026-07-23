@@ -24,7 +24,7 @@ export function App() {
   }, [csrf])
 
   useEffect(() => {
-    renderer.console.show()
+    // renderer.console.show()
     console.log("App mounted, CSRF:", csrf)
   }, [])
 

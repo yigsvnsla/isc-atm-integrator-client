@@ -5,6 +5,7 @@ const TOKEN_PATH = join(process.cwd(), ".token")
 const API_BASE = process.env.API_URL ?? "http://localhost:7000/api"
 
 let _csrfToken = ""
+let _sessionCookie = ""
 
 export function setCsrfToken(t: string) {
   _csrfToken = t
@@ -12,6 +13,10 @@ export function setCsrfToken(t: string) {
 
 export function getCsrfToken(): string {
   return _csrfToken
+}
+
+export function setSessionCookie(cookie: string) {
+  _sessionCookie = cookie
 }
 
 interface ApiOptions {
@@ -53,6 +58,9 @@ export async function api<T>(endpoint: string, options: ApiOptions = {}): Promis
   if (_csrfToken && method !== "GET") {
     headers["x-csrf-token"] = _csrfToken
   }
+  if (_sessionCookie) {
+    headers["Cookie"] = _sessionCookie
+  }
 
   const url = new URL(`${API_BASE}/${endpoint}`)
   if (options.params) {
@@ -68,6 +76,9 @@ export async function api<T>(endpoint: string, options: ApiOptions = {}): Promis
   })
 
   console.debug(`API ${method} ${endpoint}`, { params: options.params })
+
+  const setCookie = response.headers.get("set-cookie")
+  if (setCookie) _sessionCookie = setCookie.split(";")[0]
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: response.statusText }))
