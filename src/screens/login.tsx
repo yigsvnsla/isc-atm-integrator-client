@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
 import { useAuth } from "../hooks/use-auth"
 
-export function LoginScreen() {
+export function LoginScreen({ onLoginSuccess }: { onLoginSuccess?: () => void }) {
   const { login } = useAuth()
 
   const [email, setEmail] = useState("")
@@ -19,7 +19,7 @@ export function LoginScreen() {
       if (submitting || !email || !password) return
       setSubmitting(true); setLoginErr("")
       login(email, password)
-        .then(() => { setEmail(""); setPassword("") })
+        .then(() => { setEmail(""); setPassword(""); onLoginSuccess?.() })
         .catch((e: Error) => setLoginErr(e.message))
         .finally(() => setSubmitting(false))
     }
@@ -37,7 +37,7 @@ export function LoginScreen() {
         </box>
         <box flexDirection="column">
           <box flexDirection="column">
-            <box title=" Usuario " borderStyle="rounded" borderColor={emailErr ? "#df2121" : ""} paddingX={1}>
+            <box title=" Usuario " borderStyle="rounded" borderColor={emailErr ? "#df2121" : undefined} paddingX={1}>
               <input
                 width={30} placeholder="correo@ejemplo.com" textColor={submitting ? "#555" : "#FFF"}
                 focused={submitting ? false : undefined}
@@ -50,7 +50,7 @@ export function LoginScreen() {
             {emailErr && <text marginX={1} fg="#df2121">✗ {emailErr}</text>}
           </box>
           <box flexDirection="column">
-            <box title=" Contraseña " borderStyle="rounded" borderColor={passwdErr ? "#df2121" : ""} paddingX={1}>
+            <box title=" Contraseña " borderStyle="rounded" borderColor={passwdErr ? "#df2121" : undefined} paddingX={1}>
               <input
                 width={30} placeholder="••••••••" textColor={submitting ? "#555" : "#FFF"}
                 focused={submitting ? false : undefined}

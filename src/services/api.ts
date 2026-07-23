@@ -6,6 +6,16 @@ const API_BASE = process.env.API_URL ?? "http://localhost:7000/api"
 
 let _csrfToken = ""
 let _sessionCookie = ""
+let _unauthorizedHandlers: Array<() => void> = []
+
+export function onUnauthorized(handler: () => void) {
+  _unauthorizedHandlers.push(handler)
+}
+
+function triggerUnauthorized() {
+  clearToken()
+  _unauthorizedHandlers.forEach(h => h())
+}
 
 export function setCsrfToken(t: string) {
   _csrfToken = t
@@ -83,6 +93,7 @@ export async function api<T>(endpoint: string, options: ApiOptions = {}): Promis
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: response.statusText }))
     console.error(`API ${response.status} ${endpoint}`, err)
+    if (response.status === 401) triggerUnauthorized()
     throw new Error(err.message ?? `HTTP ${response.status}`)
   }
 
