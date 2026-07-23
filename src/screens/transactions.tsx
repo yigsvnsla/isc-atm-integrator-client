@@ -2,17 +2,12 @@ import { useEffect, useState } from "react"
 import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
 import { api } from "../services/api.js"
 
-interface Tx {
-  id: string; amount?: number; operation: string; state: string
-  sourceBank: string
-}
-
-interface TxR {
-  data: Tx[]; metadata: { pagination?: { page: number; limit: number; totalItems: number } }
-}
+interface Tx { id: string; amount?: number; operation: string; state: string; sourceBank: string }
+interface TxR { data: Tx[]; metadata: { pagination?: { page: number; limit: number; totalItems: number } } }
 
 const FILTERS = ["all", "bank_a", "bank_b"]
 const statusFg = (s: string) => s === "success" ? "green" : s === "pending" ? "yellow" : "red"
+const statusIcon = (s: string) => s === "success" ? "✓" : s === "pending" ? "○" : "✗"
 
 export function TransactionsScreen() {
   const [txs, setTxs] = useState<Tx[]>([])
@@ -20,6 +15,8 @@ export function TransactionsScreen() {
   const [total, setTotal] = useState(0)
   const [filter, setFilter] = useState("all")
   const [loading, setLoading] = useState(true)
+  const [selIdx, setSelIdx] = useState(0)
+  const [hoverIdx, setHoverIdx] = useState(-1)
   const limit = 10
 
   useEffect(() => {
@@ -27,23 +24,23 @@ export function TransactionsScreen() {
     const p: Record<string, string | number | undefined> = { page, limit }
     if (filter !== "all") p.sourceBank = filter
     api<TxR>("transactions", { params: p })
-      .then(r => { setTxs(r.data); setTotal(r.metadata?.pagination?.totalItems ?? 0) })
+      .then(r => { setTxs(r.data); setSelIdx(0) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [page, filter])
 
   useKeyboardEffect((key) => {
+    if (key.name === "down") setSelIdx(i => Math.min(i + 1, Math.min(txs.length, limit) - 1))
+    if (key.name === "up") setSelIdx(i => Math.max(0, i - 1))
     if (key.name === "n" || key.name === "right") setPage(p => Math.min(p + 1, Math.ceil(total / limit)))
     if (key.name === "p" || key.name === "left") setPage(p => Math.max(1, p - 1))
-    if (key.name >= "1" && key.name <= "3") {
-      const i = parseInt(key.name) - 1
-      if (i < FILTERS.length) { setFilter(FILTERS[i]); setPage(1) }
-    }
+    if (key.name >= "1" && key.name <= "3") { const i = parseInt(key.name) - 1; if (i < FILTERS.length) { setFilter(FILTERS[i]); setPage(1) } }
   })
 
   if (loading) return <text>Loading transactions...</text>
 
   const pages = Math.ceil(total / limit)
+  const visible = txs.slice(0, limit)
 
   return (
     <box flexDirection="column" gap={1}>
@@ -51,9 +48,14 @@ export function TransactionsScreen() {
 
       <box flexDirection="row" gap={2}>
         {FILTERS.map((f, i) => (
-          <text key={f} fg={filter === f ? "#58a6ff" : "#888"}>
-            [{i + 1}] {f === "all" ? "All" : f}
-          </text>
+          <box key={f}
+            borderStyle={filter === f ? "single" : undefined}
+            borderColor={filter === f ? "#58a6ff" : undefined}
+            paddingX={1}
+            onMouseDown={() => { setFilter(f); setPage(1) }}
+          >
+            <text fg={filter === f ? "#58a6ff" : "#888"}>[{i + 1}] {f === "all" ? "All" : f}</text>
+          </box>
         ))}
       </box>
 
@@ -64,14 +66,23 @@ export function TransactionsScreen() {
           <text width={10} fg="#888"><b>State</b></text>
           <text width={8} fg="#888"><b>Bank</b></text>
         </box>
-        {txs.slice(0, limit).map(tx => (
-          <box key={tx.id} flexDirection="row" gap={1} paddingX={1}>
-            <text width={18}>{tx.operation}</text>
-            <text width={10}>{tx.amount != null ? `$${(tx.amount / 100).toFixed(2)}` : "-"}</text>
-            <text width={10} fg={statusFg(tx.state)}>{tx.state}</text>
-            <text width={8}>{tx.sourceBank}</text>
-          </box>
-        ))}
+        {visible.map((tx, i) => {
+          const isSel = i === selIdx
+          const isHov = i === hoverIdx
+          return (
+            <box key={tx.id} flexDirection="row" gap={1} paddingX={1}
+              backgroundColor={isSel ? "#2c62b3" : isHov ? "#1a1a2e" : i % 2 === 1 ? "#111" : undefined}
+              onMouseDown={() => setSelIdx(i)}
+              onMouseOver={() => setHoverIdx(i)}
+              onMouseOut={() => setHoverIdx(-1)}
+            >
+              <text width={18}>{tx.operation}</text>
+              <text width={10}>{tx.amount != null ? `$${(tx.amount / 100).toFixed(2)}` : "-"}</text>
+              <text width={10} fg={statusFg(tx.state)}>{statusIcon(tx.state)} {tx.state}</text>
+              <text width={8}>{tx.sourceBank}</text>
+            </box>
+          )
+        })}
       </box>
 
       <box flexDirection="row" gap={1}>
@@ -80,7 +91,7 @@ export function TransactionsScreen() {
         <text fg="#666">{'>'}</text>
       </box>
 
-      <text fg="#666">[p] prev · [n] next · [1-3] filter</text>
+      <text fg="#666">↑↓ select · [p] prev · [n] next · [1-3] filter</text>
     </box>
   )
 }

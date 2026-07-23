@@ -5,7 +5,6 @@ import { api } from "../services/api.js"
 const OPERATIONS = ["withdrawal", "deposit", "transfer", "balance_inquiry", "pin_change", "reversal", "mini_statement"]
 const SOURCE_BANKS = ["bank_a", "bank_b"]
 const TYPES = ["debit", "credit"]
-
 const STEPS = ["account_id", "amount", "operation", "type", "source_bank", "description"] as const
 type Field = (typeof STEPS)[number]
 
@@ -17,21 +16,18 @@ export function CreateTransactionScreen() {
   const [step, setStep] = useState(0)
   const [result, setResult] = useState("")
   const [loading, setLoading] = useState(false)
+  const [hoverOpt, setHoverOpt] = useState(-1)
 
   const upd = (k: Field) => (v: string) => setF(p => ({ ...p, [k]: v }))
   const next = () => step < STEPS.length - 1 && setStep(s => s + 1)
 
   useKeyboardEffect((key) => {
     if (key.name === "escape") { setStep(0); setResult(""); return }
-
-    if (STEPS[step] === "operation" || STEPS[step] === "type" || STEPS[step] === "source_bank") {
-      const opts = STEPS[step] === "operation" ? OPERATIONS : STEPS[step] === "type" ? TYPES : SOURCE_BANKS
+    const field = STEPS[step]
+    if (field === "operation" || field === "type" || field === "source_bank") {
+      const opts = field === "operation" ? OPERATIONS : field === "type" ? TYPES : SOURCE_BANKS
       const n = parseInt(key.name)
-      if (n >= 1 && n <= opts.length) {
-        upd(STEPS[step])(opts[n - 1])
-        key.name === "return" ? null : next()
-        next()
-      }
+      if (n >= 1 && n <= opts.length) { upd(field)(opts[n - 1]); next() }
     }
   })
 
@@ -52,46 +48,55 @@ export function CreateTransactionScreen() {
   const handleSubmit = () => step < STEPS.length - 1 ? next() : submit()
 
   const field = STEPS[step]
+  const pct = Math.round(((step) / (STEPS.length - 1)) * 100)
 
   return (
     <box flexDirection="column" gap={1}>
       <text><b>Create Transaction</b></text>
 
+      <box flexDirection="row" gap={1}>
+        {STEPS.map((s, i) => (
+          <text key={s} fg={i === step ? "#58a6ff" : i < step ? "green" : "#444"}>
+            {i <= step ? "●" : "○"}
+          </text>
+        ))}
+        <text fg="#666">({pct}%)</text>
+      </box>
+
       {(field === "account_id" || field === "amount" || field === "description") ? (
         <box flexDirection="column">
-          <text fg="#888"><b>{field === "account_id" ? "Account ID" : field === "amount" ? "Amount" : "Description"}</b></text>
-          <input
-            placeholder={field === "account_id" ? "Enter account ID" : field === "amount" ? "in cents" : "Optional"}
+          <text fg="#888" marginBottom={1}><b>{
+            field === "account_id" ? "Account ID" : field === "amount" ? "Amount (cents)" : "Description"
+          }</b></text>
+          <input placeholder={field === "account_id" ? "Enter account ID" : field === "amount" ? "e.g. 5000" : "Optional"}
             onInput={upd(field)} onSubmit={handleSubmit} value={f[field]} />
         </box>
-      ) : field === "operation" ? (
+      ) : (
         <box flexDirection="column">
-          <text fg="#888"><b>Operation</b></text>
-          {OPERATIONS.map((o, i) => (
-            <text key={o} fg={f.operation === o ? "#58a6ff" : "#FFF"}>
-              {f.operation === o ? "›" : " "} [{i + 1}] {o}
-            </text>
-          ))}
+          <text fg="#888" marginBottom={1}><b>{
+            field === "operation" ? "Operation" : field === "type" ? "Type" : "Source Bank"
+          }</b></text>
+          {(
+            field === "operation" ? OPERATIONS :
+            field === "type" ? TYPES : SOURCE_BANKS
+          ).map((opt, i) => {
+            const val = f[field]
+            const isSel = val === opt
+            return (
+              <box key={opt} flexDirection="row" gap={1} paddingX={1}
+                backgroundColor={isSel ? "#2c62b3" : hoverOpt === i ? "#1a1a2e" : undefined}
+                onMouseDown={() => { upd(field)(opt); next() }}
+                onMouseOver={() => setHoverOpt(i)}
+                onMouseOut={() => setHoverOpt(-1)}
+              >
+                <text fg={isSel ? "#58a6ff" : "#FFF"}>
+                  {isSel ? "▸" : " "} [{i + 1}] {opt}
+                </text>
+              </box>
+            )
+          })}
         </box>
-      ) : field === "type" ? (
-        <box flexDirection="column">
-          <text fg="#888"><b>Type</b></text>
-          {TYPES.map((t, i) => (
-            <text key={t} fg={f.type === t ? "#58a6ff" : "#FFF"}>
-              {f.type === t ? "›" : " "} [{i + 1}] {t}
-            </text>
-          ))}
-        </box>
-      ) : field === "source_bank" ? (
-        <box flexDirection="column">
-          <text fg="#888"><b>Source Bank</b></text>
-          {SOURCE_BANKS.map((b, i) => (
-            <text key={b} fg={f.source_bank === b ? "#58a6ff" : "#FFF"}>
-              {f.source_bank === b ? "›" : " "} [{i + 1}] {b}
-            </text>
-          ))}
-        </box>
-      ) : null}
+      )}
 
       {loading && <text>Creating...</text>}
       {result && <text fg={result.startsWith("Error") ? "#df2121" : "green"}>{result}</text>}

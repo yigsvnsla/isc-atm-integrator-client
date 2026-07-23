@@ -2,22 +2,15 @@ import { useEffect, useState } from "react"
 import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
 import { api } from "../services/api.js"
 
-interface CRun {
-  id: string; runAt: string; status: string
-  summary: { matched: number; discrepancies: number; missing: number }
-}
-
+interface CRun { id: string; runAt: string; status: string; summary: { matched: number; discrepancies: number; missing: number } }
 interface CReport {
   conciliation: CRun
   matches: Array<{ internalTxId: string; externalTxId?: string; status: string; amountDiff: number }>
 }
-
 interface CRes { data: CRun[] }
 
-const statusIcon = (s: string) =>
-  s === "matched" ? "✓" : s === "discrepancy" ? "⚠" : s === "missing" ? "✗" : "?"
-const statusFg = (s: string) =>
-  s === "matched" ? "green" : s === "discrepancy" ? "yellow" : s === "missing" ? "red" : "#888"
+const statusIcon = (s: string) => s === "matched" ? "✓" : s === "discrepancy" ? "⚠" : s === "missing" ? "✗" : "?"
+const statusFg = (s: string) => s === "matched" ? "green" : s === "discrepancy" ? "yellow" : s === "missing" ? "red" : "#888"
 
 export function ConciliationScreen() {
   const [concs, setConcs] = useState<CRun[]>([])
@@ -26,6 +19,7 @@ export function ConciliationScreen() {
   const [running, setRunning] = useState(false)
   const [msg, setMsg] = useState("")
   const [selIdx, setSelIdx] = useState(0)
+  const [hoverIdx, setHoverIdx] = useState(-1)
 
   const load = () => {
     setLoading(true)
@@ -43,8 +37,8 @@ export function ConciliationScreen() {
       return
     }
     if (key.name === "r" && !running) { runConc(); return }
-    if (key.name === "up" && concs.length > 0) setSelIdx(i => Math.max(0, i - 1))
-    if (key.name === "down" && concs.length > 0) setSelIdx(i => Math.min(concs.length - 1, i + 1))
+    if (key.name === "up") setSelIdx(i => Math.max(0, i - 1))
+    if (key.name === "down") setSelIdx(i => Math.min(concs.length - 1, i + 1))
     if (key.name === "return" && concs.length > 0) view(concs[selIdx].id)
   })
 
@@ -79,7 +73,6 @@ export function ConciliationScreen() {
             <text fg="red">✗ Missing: {c.summary.missing}</text>
           </box>
         </box>
-
         <box flexDirection="column">
           <box flexDirection="row" gap={1} paddingX={1}>
             <text width={22} fg="#888"><b>Internal Tx</b></text>
@@ -88,7 +81,8 @@ export function ConciliationScreen() {
             <text width={10} fg="#888"><b>Diff</b></text>
           </box>
           {report.matches.map((m, i) => (
-            <box key={i} flexDirection="row" gap={1} paddingX={1}>
+            <box key={i} flexDirection="row" gap={1} paddingX={1}
+              backgroundColor={i % 2 === 1 ? "#111" : undefined}>
               <text width={22}>{m.internalTxId.slice(0, 18)}..</text>
               <text width={22}>{(m.externalTxId ?? "-").slice(0, 18)}</text>
               <text width={14} fg={statusFg(m.status)}>{statusIcon(m.status)} {m.status}</text>
@@ -107,7 +101,9 @@ export function ConciliationScreen() {
     <box flexDirection="column" gap={1}>
       <box flexDirection="row" gap={1}>
         <text><b>Conciliations</b></text>
-        <text fg="#58a6ff">[r: run]</text>
+        <box borderStyle="single" borderColor="#58a6ff" paddingX={1} onMouseDown={() => !running && runConc()}>
+          <text fg="#58a6ff">r: run</text>
+        </box>
       </box>
 
       {concs.length === 0
@@ -121,9 +117,12 @@ export function ConciliationScreen() {
               <text width={8} fg="#888"><b>Miss</b></text>
             </box>
             {concs.map((c, i) => (
-              <box key={c.id} flexDirection="row" gap={1}
-                paddingX={1}
-                backgroundColor={i === selIdx ? "#333" : undefined}>
+              <box key={c.id} flexDirection="row" gap={1} paddingX={1}
+                backgroundColor={i === selIdx ? "#2c62b3" : i === hoverIdx ? "#1a1a2e" : i % 2 === 1 ? "#111" : undefined}
+                onMouseDown={() => { setSelIdx(i); view(c.id) }}
+                onMouseOver={() => setHoverIdx(i)}
+                onMouseOut={() => setHoverIdx(-1)}
+              >
                 <text width={24}>{new Date(c.runAt).toLocaleDateString()}</text>
                 <text width={12} fg={statusFg(c.status)}>{statusIcon(c.status)} {c.status}</text>
                 <text width={8}>{c.summary.matched}</text>

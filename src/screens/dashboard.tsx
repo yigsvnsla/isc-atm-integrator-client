@@ -41,13 +41,15 @@ export function DashboardScreen() {
   return (
     <box borderStyle="single" padding={1} flexDirection="column" gap={1}>
       <text><b>Dashboard</b></text>
-      <text>Total Transactions: <span fg="green">{data.totalTxs}</span></text>
-      <text>Last Conciliation: {data.last}</text>
-      <box flexDirection="row" gap={2}>
-        <text>Matched: {data.matched}</text>
-        <text>Discrepancies: {data.discrepancies}</text>
+      <box borderStyle="single" padding={1} flexDirection="column" gap={1}>
+        <text>Total Transactions: <span fg="green">{data.totalTxs}</span></text>
+        <text>Last Conciliation: {data.last}</text>
+        <box flexDirection="row" gap={2}>
+          <text>✓ Matched: {data.matched}</text>
+          <text>⚠ Discrepancies: {data.discrepancies}</text>
+        </box>
       </box>
-      <text fg="#666">Use number keys to navigate screens</text>
+      <text fg="#666">Use number keys [1-5] to navigate screens</text>
     </box>
   )
 }
