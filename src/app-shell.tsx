@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useRenderer } from "@opentui/react"
 import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
 import { Box } from "@/components/ui/box"
 import { Heading } from "@/components/ui/heading"
@@ -28,13 +29,15 @@ const NAV_KEYS: Record<string, Screen> = {
 }
 
 export function AppShell({ screen, onNavigate }: { screen: Screen; onNavigate: (s: Screen) => void }) {
+  const renderer = useRenderer()
+
   useKeyboardEffect((key) => {
     if (key.name === "escape") {
       onNavigate("dashboard")
       return
     }
     if (key.ctrl && key.name === "q") {
-      process.exit(0)
+      renderer.destroy()
     }
     const target = NAV_KEYS[key.name]
     if (target) onNavigate(target)
