@@ -1,38 +1,63 @@
-import { RGBA } from "@opentui/core";
-import { useEffect, useState } from "react";
-import { useKeyboard } from "@opentui/react";
-import { useCsrfToken } from "./hooks/use-get-crsf-token";
-import { useRenderer } from "@opentui/react";
+import { RGBA } from "@opentui/core"
+import { useEffect, useState } from "react"
+import { useRenderer } from "@opentui/react"
+import { useCsrfToken } from "./hooks/use-get-crsf-token"
+import { useKeyboardEffect } from "./hooks/use-keyboard-effect"
+import { AppShell, type Screen } from "./app-shell"
+import { useAuth } from "./hooks/use-auth"
 
 const isValidEmail = (email: string): boolean => {
-  const atIdx = email.indexOf("@");
-  if (atIdx < 1) return false;
-  return email.slice(atIdx + 1).includes(".");
-};
-
-const FORM_STATE = { IDLE: "idle", LOADING: "loading", SUCCESS: "success", ERROR: "error" } as const;
-type FormState = (typeof FORM_STATE)[keyof typeof FORM_STATE];
+  const atIdx = email.indexOf("@")
+  if (atIdx < 1) return false
+  return email.slice(atIdx + 1).includes(".")
+}
 
 export function App() {
-  const renderer = useRenderer();
+  const renderer = useRenderer()
+  const { token, isLoggedIn, login } = useAuth()
+  const csrf = useCsrfToken()
+
+  const [screen, setScreen] = useState<Screen>("dashboard")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [emailErr, setEmailErr] = useState("")
+  const [passwdErr, setPasswdErr] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [loginErr, setLoginErr] = useState("")
 
   useEffect(() => {
-    renderer.console.show();
-    console.log("Hello from console!");
-  }, []);
+    renderer.console.show()
+    console.log("App mounted, CSRF:", csrf?.value)
+  }, [])
 
-  const csrf = useCsrfToken();
-  const [formState, setFormState] = useState<FormState>(FORM_STATE.IDLE);
-  const [emailErr, setEmailErr] = useState("");
-  const [passwdErr, setPasswdErr] = useState("");
+  const disabled = submitting || csrf === null || !!csrf?.isFailed
 
-  const isDisabled = formState === FORM_STATE.LOADING || formState === FORM_STATE.SUCCESS || csrf === null;
-
-  useKeyboard((key) => {
+  useKeyboardEffect((key) => {
+    if (isLoggedIn) return
     if (key.name === "return" || (key.ctrl && key.name === "s")) {
-      if (isDisabled) return;
+      if (disabled || emailErr || passwdErr || !email || !password) return
+      handleLogin()
     }
-  });
+  })
+
+  async function handleLogin() {
+    setSubmitting(true)
+    setLoginErr("")
+    try {
+      await login(email, password)
+      setEmail("")
+      setPassword("")
+      setEmailErr("")
+      setPasswdErr("")
+    } catch (e: unknown) {
+      setLoginErr((e as Error).message)
+    }
+    setSubmitting(false)
+  }
+
+  if (isLoggedIn) {
+    return <AppShell screen={screen} onNavigate={setScreen} />
+  }
 
   return (
     <box
@@ -49,13 +74,7 @@ export function App() {
         </text>
       )}
 
-      <box
-        borderStyle="rounded"
-        alignItems="center"
-        padding={4}
-        paddingY={1}
-        paddingBottom={1}
-      >
+      <box borderStyle="rounded" alignItems="center" padding={4} paddingY={1} paddingBottom={1}>
         <box flexDirection="row">
           <ascii-font id="title" text="BAN " font="block" color={RGBA.fromHex("#df2121")} />
           <ascii-font id="title" text="NET" font="block" color={RGBA.fromHex("#2c62b3")} />
@@ -76,14 +95,15 @@ export function App() {
               paddingX={1}
             >
               <input
-                id="styled-input"
+                id="email-input"
                 width={30}
                 placeholder="correo@ejemplo.com"
-                textColor={isDisabled ? "#555" : "#FFFFFF"}
-                focused={isDisabled ? false : undefined}
+                textColor={disabled ? "#555" : "#FFFFFF"}
+                focused={disabled ? false : undefined}
                 onInput={(v: string) => {
-                  if (isDisabled) return;
-                  setEmailErr(v && !isValidEmail(v) ? "Correo inválido" : "");
+                  if (disabled) return
+                  setEmail(v)
+                  setEmailErr(v && !isValidEmail(v) ? "Correo inválido" : "")
                 }}
               />
             </box>
@@ -95,16 +115,22 @@ export function App() {
           </box>
 
           <box flexDirection="column">
-            <box title=" Contraseña " borderStyle="rounded" paddingX={1}>
+            <box
+              title=" Contraseña "
+              borderStyle="rounded"
+              borderColor={passwdErr ? RGBA.fromHex("#df2121") : undefined}
+              paddingX={1}
+            >
               <input
-                id="styled-input"
+                id="password-input"
                 width={30}
                 placeholder="••••••••"
-                textColor={isDisabled ? "#555" : "#FFFFFF"}
-                focused={isDisabled ? false : undefined}
+                textColor={disabled ? "#555" : "#FFFFFF"}
+                focused={disabled ? false : undefined}
                 onInput={(v: string) => {
-                  if (isDisabled) return;
-                  setPasswdErr(v.length > 0 && v.length < 6 ? "Mínimo 6 caracteres" : "");
+                  if (disabled) return
+                  setPassword(v)
+                  setPasswdErr(v.length > 0 && v.length < 6 ? "Mínimo 6 caracteres" : "")
                 }}
               />
             </box>
@@ -116,10 +142,14 @@ export function App() {
           </box>
         </box>
 
-        {formState === FORM_STATE.LOADING && <text>Ingresando...</text>}
-        {formState === FORM_STATE.ERROR && <text fg={RGBA.fromHex("#df2121")}>Error al iniciar sesión</text>}
-        {csrf && <text fg="#666">Enter o Ctrl+S para ingresar</text>}
+        {submitting && <text>Ingresando...</text>}
+        {loginErr && (
+          <text marginY={1} fg={RGBA.fromHex("#df2121")}>
+            ✗ {loginErr}
+          </text>
+        )}
+        {csrf && !csrf.isFailed && <text fg="#666">Enter o Ctrl+S para ingresar</text>}
       </box>
     </box>
-  );
+  )
 }
