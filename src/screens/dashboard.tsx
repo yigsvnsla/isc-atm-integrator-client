@@ -53,8 +53,7 @@ export function DashboardScreen() {
     <Card title="Dashboard">
       <box flexDirection="column" gap={1}>
         <text>
-          Total Transactions:{" "}
-          <text fg="green">{stats.totalTxs}</text>
+          Total Transactions: <span fg="green">{stats.totalTxs}</span>
         </text>
         <text>Last Conciliation: {stats.lastConciliation}</text>
         <box flexDirection="row" gap={2}>
