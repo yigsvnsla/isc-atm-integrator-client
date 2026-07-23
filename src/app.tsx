@@ -1,8 +1,9 @@
 import { RGBA } from "@opentui/core"
 import { useEffect, useState } from "react"
 import { useRenderer } from "@opentui/react"
-import { useCsrfToken } from "./hooks/use-get-crsf-token"
-import { useKeyboardEffect } from "./hooks/use-keyboard-effect"
+import { useCsrf } from "@/components/csrf-provider"
+import { setCsrfToken } from "@/services/api"
+import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
 import { AppShell, type Screen } from "./app-shell"
 import { useAuth } from "./hooks/use-auth"
 
@@ -14,8 +15,18 @@ const isValidEmail = (email: string): boolean => {
 
 export function App() {
   const renderer = useRenderer()
-  const { token, isLoggedIn, login } = useAuth()
-  const csrf = useCsrfToken()
+  const { login, isLoggedIn } = useAuth()
+
+  const csrf = useCsrf()
+
+  useEffect(() => {
+    if (csrf) setCsrfToken(csrf)
+  }, [csrf])
+
+  useEffect(() => {
+    renderer.console.show()
+    console.log("App mounted, CSRF:", csrf)
+  }, [])
 
   const [screen, setScreen] = useState<Screen>("dashboard")
   const [email, setEmail] = useState("")
@@ -25,12 +36,7 @@ export function App() {
   const [submitting, setSubmitting] = useState(false)
   const [loginErr, setLoginErr] = useState("")
 
-  useEffect(() => {
-    renderer.console.show()
-    console.log("App mounted, CSRF:", csrf?.value)
-  }, [])
-
-  const disabled = submitting || csrf === null || !!csrf?.isFailed
+  const disabled = submitting || csrf === null
 
   useKeyboardEffect((key) => {
     if (isLoggedIn) return
@@ -45,10 +51,7 @@ export function App() {
     setLoginErr("")
     try {
       await login(email, password)
-      setEmail("")
-      setPassword("")
-      setEmailErr("")
-      setPasswdErr("")
+      setEmail(""); setPassword(""); setEmailErr(""); setPasswdErr("")
     } catch (e: unknown) {
       setLoginErr((e as Error).message)
     }
@@ -68,12 +71,6 @@ export function App() {
       justifyContent="center"
       alignItems="center"
     >
-      {csrf?.isFailed && (
-        <text bg={RGBA.fromHex("#df2121")} paddingX={1}>
-          ✗ {csrf.error.message}
-        </text>
-      )}
-
       <box borderStyle="rounded" alignItems="center" padding={4} paddingY={1} paddingBottom={1}>
         <box flexDirection="row">
           <ascii-font id="title" text="BAN " font="block" color={RGBA.fromHex("#df2121")} />
@@ -148,7 +145,7 @@ export function App() {
             ✗ {loginErr}
           </text>
         )}
-        {csrf && !csrf.isFailed && <text fg="#666">Enter o Ctrl+S para ingresar</text>}
+        {csrf && !loginErr && <text fg="#666">Enter o Ctrl+S para ingresar</text>}
       </box>
     </box>
   )
