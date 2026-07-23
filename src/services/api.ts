@@ -4,29 +4,36 @@ import { join } from "path"
 const TOKEN_PATH = join(process.cwd(), ".token")
 const API_BASE = process.env.API_URL ?? "http://localhost:7000/api"
 
+let _accessToken = ""
 let _csrfToken = ""
+let _refreshToken = ""
 let _sessionCookie = ""
-let _unauthorizedHandlers: Array<() => void> = []
+let _authChangeHandler: (() => void) | null = null
 
-export function onUnauthorized(handler: () => void) {
-  _unauthorizedHandlers.push(handler)
+export function onAuthChange(h: () => void) {
+  _authChangeHandler = h
 }
 
-function triggerUnauthorized() {
-  clearToken()
-  _unauthorizedHandlers.forEach(h => h())
+interface AuthTokens {
+  accessToken?: string
+  refreshToken?: string
+  csrfToken?: string
+  sessionCookie?: string
 }
 
-export function setCsrfToken(t: string) {
-  _csrfToken = t
+export function setAuthTokens(tokens: AuthTokens) {
+  if (tokens.accessToken !== undefined) _accessToken = tokens.accessToken
+  if (tokens.refreshToken !== undefined) _refreshToken = tokens.refreshToken
+  if (tokens.csrfToken !== undefined) _csrfToken = tokens.csrfToken
+  if (tokens.sessionCookie !== undefined) _sessionCookie = tokens.sessionCookie
 }
 
-export function getCsrfToken(): string {
-  return _csrfToken
-}
-
-export function setSessionCookie(cookie: string) {
-  _sessionCookie = cookie
+export function clearAuth() {
+  _accessToken = ""
+  _csrfToken = ""
+  _refreshToken = ""
+  _sessionCookie = ""
+  try { writeFileSync(TOKEN_PATH, "", "utf-8") } catch {}
 }
 
 interface ApiOptions {
@@ -35,33 +42,13 @@ interface ApiOptions {
   params?: Record<string, string | number | undefined>
 }
 
-function getToken(): string | null {
-  try {
-    if (existsSync(TOKEN_PATH)) {
-      return readFileSync(TOKEN_PATH, "utf-8").trim()
-    }
-  } catch {}
-  return null
-}
-
-export function saveToken(token: string): void {
-  writeFileSync(TOKEN_PATH, token, "utf-8")
-}
-
-export function clearToken(): void {
-  try {
-    writeFileSync(TOKEN_PATH, "", "utf-8")
-  } catch {}
-}
-
 export async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
-  const token = getToken()
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "x-api-version": "1",
   }
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`
+  if (_accessToken) {
+    headers["Authorization"] = `Bearer ${_accessToken}`
   }
 
   const method = options.method ?? "GET"
@@ -93,7 +80,10 @@ export async function api<T>(endpoint: string, options: ApiOptions = {}): Promis
   if (!response.ok) {
     const err = await response.json().catch(() => ({ message: response.statusText }))
     console.error(`API ${response.status} ${endpoint}`, err)
-    if (response.status === 401) triggerUnauthorized()
+    if (response.status === 401) {
+      clearAuth()
+      _authChangeHandler?.()
+    }
     throw new Error(err.message ?? `HTTP ${response.status}`)
   }
 
