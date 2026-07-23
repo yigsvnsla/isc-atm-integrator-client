@@ -1,152 +1,26 @@
-import { RGBA } from "@opentui/core"
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { useRenderer } from "@opentui/react"
 import { useCsrf } from "@/components/csrf-provider"
 import { setCsrfToken } from "@/services/api"
-import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
 import { AppShell, type Screen } from "./app-shell"
 import { useAuth } from "./hooks/use-auth"
-
-const isValidEmail = (email: string): boolean => {
-  const atIdx = email.indexOf("@")
-  if (atIdx < 1) return false
-  return email.slice(atIdx + 1).includes(".")
-}
+import { LoginScreen } from "./screens/login"
 
 export function App() {
   const renderer = useRenderer()
-  const { login, isLoggedIn } = useAuth()
-
+  const { isLoggedIn } = useAuth()
   const csrf = useCsrf()
+  const [screen, setScreen] = useState<Screen>("dashboard")
 
   useEffect(() => {
     if (csrf) setCsrfToken(csrf)
   }, [csrf])
 
   useEffect(() => {
-    // renderer.console.show()
+    renderer.console.show()
     console.log("App mounted, CSRF:", csrf)
   }, [])
 
-  const [screen, setScreen] = useState<Screen>("dashboard")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [emailErr, setEmailErr] = useState("")
-  const [passwdErr, setPasswdErr] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const [loginErr, setLoginErr] = useState("")
-
-  const disabled = submitting || csrf === null
-
-  useKeyboardEffect((key) => {
-    if (isLoggedIn) return
-    if (key.name === "return" || (key.ctrl && key.name === "s")) {
-      if (disabled || emailErr || passwdErr || !email || !password) return
-      handleLogin()
-    }
-  })
-
-  async function handleLogin() {
-    setSubmitting(true)
-    setLoginErr("")
-    try {
-      await login(email, password)
-      setEmail(""); setPassword(""); setEmailErr(""); setPasswdErr("")
-    } catch (e: unknown) {
-      setLoginErr((e as Error).message)
-    }
-    setSubmitting(false)
-  }
-
-  if (isLoggedIn) {
-    return <AppShell screen={screen} onNavigate={setScreen} />
-  }
-
-  return (
-    <box
-      title=" ISC ATM INTEGRATOR "
-      id="panel"
-      flexGrow={1}
-      borderStyle="rounded"
-      justifyContent="center"
-      alignItems="center"
-    >
-      <box borderStyle="rounded" alignItems="center" padding={4} paddingY={1} paddingBottom={1}>
-        <box flexDirection="row">
-          <ascii-font id="title" text="BAN " font="block" color={RGBA.fromHex("#df2121")} />
-          <ascii-font id="title" text="NET" font="block" color={RGBA.fromHex("#2c62b3")} />
-        </box>
-
-        <box alignItems="center" marginY={1}>
-          <text>
-            <strong>SERVICIO DE INTEGRACION FINANCIERO</strong>
-          </text>
-        </box>
-
-        <box flexDirection="column">
-          <box flexDirection="column">
-            <box
-              title=" Usuario "
-              borderStyle="rounded"
-              borderColor={emailErr ? RGBA.fromHex("#df2121") : undefined}
-              paddingX={1}
-            >
-              <input
-                id="email-input"
-                width={30}
-                placeholder="correo@ejemplo.com"
-                textColor={disabled ? "#555" : "#FFFFFF"}
-                focused={disabled ? false : undefined}
-                onInput={(v: string) => {
-                  if (disabled) return
-                  setEmail(v)
-                  setEmailErr(v && !isValidEmail(v) ? "Correo inválido" : "")
-                }}
-              />
-            </box>
-            {emailErr && (
-              <text marginX={1} fg={RGBA.fromHex("#df2121")}>
-                ✗ {emailErr}
-              </text>
-            )}
-          </box>
-
-          <box flexDirection="column">
-            <box
-              title=" Contraseña "
-              borderStyle="rounded"
-              borderColor={passwdErr ? RGBA.fromHex("#df2121") : undefined}
-              paddingX={1}
-            >
-              <input
-                id="password-input"
-                width={30}
-                placeholder="••••••••"
-                textColor={disabled ? "#555" : "#FFFFFF"}
-                focused={disabled ? false : undefined}
-                onInput={(v: string) => {
-                  if (disabled) return
-                  setPassword(v)
-                  setPasswdErr(v.length > 0 && v.length < 6 ? "Mínimo 6 caracteres" : "")
-                }}
-              />
-            </box>
-            {passwdErr && (
-              <text marginX={1} fg={RGBA.fromHex("#df2121")}>
-                ✗ {passwdErr}
-              </text>
-            )}
-          </box>
-        </box>
-
-        {submitting && <text>Ingresando...</text>}
-        {loginErr && (
-          <text marginY={1} fg={RGBA.fromHex("#df2121")}>
-            ✗ {loginErr}
-          </text>
-        )}
-        {csrf && !loginErr && <text fg="#666">Enter o Ctrl+S para ingresar</text>}
-      </box>
-    </box>
-  )
+  if (!isLoggedIn) return <LoginScreen />
+  return <AppShell screen={screen} onNavigate={setScreen} />
 }

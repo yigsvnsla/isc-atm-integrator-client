@@ -1,164 +1,142 @@
-import { useEffect, useState } from "react";
-import { useKeyboard } from "@opentui/react";
-import { Card } from "@/components/ui/card";
-import { DataGrid } from "@/components/ui/data-grid";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { Alert } from "@/components/ui/alert";
-import { api } from "../services/api.js";
+import { useEffect, useState } from "react"
+import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
+import { api } from "../services/api.js"
 
-interface ConciliationRun {
-  id: string;
-  runAt: string;
-  status: string;
-  summary: { matched: number; discrepancies: number; missing: number };
+interface CRun {
+  id: string; runAt: string; status: string
+  summary: { matched: number; discrepancies: number; missing: number }
 }
 
-interface ConciliationReport {
-  conciliation: ConciliationRun;
-  matches: Array<{
-    id: string;
-    internalTxId: string;
-    externalTxId?: string;
-    status: string;
-    amountDiff: number;
-    notes?: string;
-  }>;
+interface CReport {
+  conciliation: CRun
+  matches: Array<{ internalTxId: string; externalTxId?: string; status: string; amountDiff: number }>
 }
 
-interface ConcsResponse {
-  data: ConciliationRun[];
-}
+interface CRes { data: CRun[] }
 
-const statusBadge = (status: string) => {
-  switch (status) {
-    case "matched": return "success" as const;
-    case "discrepancy": return "warning" as const;
-    case "missing": return "error" as const;
-    default: return "default" as const;
-  }
-};
+const statusIcon = (s: string) =>
+  s === "matched" ? "✓" : s === "discrepancy" ? "⚠" : s === "missing" ? "✗" : "?"
+const statusFg = (s: string) =>
+  s === "matched" ? "green" : s === "discrepancy" ? "yellow" : s === "missing" ? "red" : "#888"
 
 export function ConciliationScreen() {
-  const [concs, setConcs] = useState<ConciliationRun[]>([]);
-  const [report, setReport] = useState<ConciliationReport | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [concs, setConcs] = useState<CRun[]>([])
+  const [report, setReport] = useState<CReport | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [msg, setMsg] = useState("")
+  const [selIdx, setSelIdx] = useState(0)
 
   const load = () => {
-    setLoading(true);
-    api<ConcsResponse>("conciliation")
-      .then((res) => setConcs(res.data))
+    setLoading(true)
+    api<CRes>("conciliation")
+      .then(r => { setConcs(r.data); setSelIdx(0) })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(load, []);
-
-  useKeyboard((key) => {
-    if (key.name === "r" && !running && !report) runConciliation();
-    if (key.name === "q" && report) setReport(null);
-  });
-
-  const viewReport = async (id: string) => {
-    setLoading(true);
-    try {
-      const res = await api<{ data: ConciliationReport }>(`conciliation/${id}`);
-      setReport(res.data);
-    } catch (e: unknown) {
-      setMsg(`Error: ${(e as Error).message}`);
-    }
-    setLoading(false);
-  };
-
-  const runConciliation = async () => {
-    setRunning(true);
-    setMsg("Running conciliation...");
-    try {
-      await api("conciliation/run", { method: "POST" });
-      setMsg("Done!");
-      load();
-    } catch (e: unknown) {
-      setMsg(`Error: ${(e as Error).message}`);
-    }
-    setRunning(false);
-  };
-
-  if (report) {
-    const { conciliation, matches } = report;
-    const flatMatches: Array<Record<string, unknown>> = matches.map((m) => ({
-      internalTxId: m.internalTxId,
-      externalTxId: m.externalTxId ?? "-",
-      status: m.status,
-      amountDiff: m.amountDiff != null ? `$${(m.amountDiff / 100).toFixed(2)}` : "-",
-    }));
-    return (
-      <box flexDirection="column" gap={1}>
-        <Card title={`Conciliation Report ${conciliation.id.slice(0, 8)}`}>
-          <box flexDirection="column" gap={1}>
-            <text>Status: {conciliation.status}</text>
-            <box flexDirection="row" gap={2}>
-              <Badge color="green">{`Matched: ${conciliation.summary.matched}`}</Badge>
-              <Badge color="yellow">{`Discrepancies: ${conciliation.summary.discrepancies}`}</Badge>
-              <Badge color="red">{`Missing: ${conciliation.summary.missing}`}</Badge>
-            </box>
-          </box>
-        </Card>
-        <DataGrid
-          data={flatMatches}
-          columns={[
-            { key: "internalTxId", header: "Internal Tx", width: 22 },
-            { key: "externalTxId", header: "External Tx", width: 22 },
-            { key: "status", header: "Status", width: 14 },
-            { key: "amountDiff", header: "Diff", width: 10 },
-          ]}
-          pageSize={15}
-        />
-        <text fg="#666">Press q to go back</text>
-      </box>
-    );
+      .finally(() => setLoading(false))
   }
 
-  if (loading) return <Spinner label="Loading..." />;
+  useEffect(load, [])
 
-  const flatConcs: Array<Record<string, unknown>> = concs.map((c) => ({
-    id: c.id,
-    runAt: new Date(c.runAt).toLocaleDateString(),
-    status: c.status,
-        matched: c.summary.matched,
-        discrepancies: c.summary.discrepancies,
-        missing: c.summary.missing,
-  }));
+  useKeyboardEffect((key) => {
+    if (report) {
+      if (key.name === "q" || key.name === "escape") { setReport(null); setMsg(""); return }
+      return
+    }
+    if (key.name === "r" && !running) { runConc(); return }
+    if (key.name === "up" && concs.length > 0) setSelIdx(i => Math.max(0, i - 1))
+    if (key.name === "down" && concs.length > 0) setSelIdx(i => Math.min(concs.length - 1, i + 1))
+    if (key.name === "return" && concs.length > 0) view(concs[selIdx].id)
+  })
+
+  const view = async (id: string) => {
+    setLoading(true)
+    try {
+      const res = await api<{ data: CReport }>(`conciliation/${id}`)
+      setReport(res.data)
+    } catch (e: unknown) { setMsg(`Error: ${(e as Error).message}`) }
+    setLoading(false)
+  }
+
+  const runConc = async () => {
+    setRunning(true); setMsg("Running conciliation...")
+    try {
+      await api("conciliation/run", { method: "POST" })
+      setMsg("Done!"); load()
+    } catch (e: unknown) { setMsg(`Error: ${(e as Error).message}`) }
+    setRunning(false)
+  }
+
+  if (report) {
+    const c = report.conciliation
+    return (
+      <box flexDirection="column" gap={1}>
+        <box borderStyle="single" padding={1} flexDirection="column" gap={1}>
+          <text><b>Report: {c.id.slice(0, 8)}</b></text>
+          <text>Status: <span fg={statusFg(c.status)}>{statusIcon(c.status)} {c.status}</span></text>
+          <box flexDirection="row" gap={2}>
+            <text fg="green">✓ Matched: {c.summary.matched}</text>
+            <text fg="yellow">⚠ Diff: {c.summary.discrepancies}</text>
+            <text fg="red">✗ Missing: {c.summary.missing}</text>
+          </box>
+        </box>
+
+        <box flexDirection="column">
+          <box flexDirection="row" gap={1} paddingX={1}>
+            <text width={22} fg="#888"><b>Internal Tx</b></text>
+            <text width={22} fg="#888"><b>External Tx</b></text>
+            <text width={14} fg="#888"><b>Status</b></text>
+            <text width={10} fg="#888"><b>Diff</b></text>
+          </box>
+          {report.matches.map((m, i) => (
+            <box key={i} flexDirection="row" gap={1} paddingX={1}>
+              <text width={22}>{m.internalTxId.slice(0, 18)}..</text>
+              <text width={22}>{(m.externalTxId ?? "-").slice(0, 18)}</text>
+              <text width={14} fg={statusFg(m.status)}>{statusIcon(m.status)} {m.status}</text>
+              <text width={10}>{m.amountDiff != null ? `$${(m.amountDiff / 100).toFixed(2)}` : "-"}</text>
+            </box>
+          ))}
+        </box>
+        <text fg="#666">Press <b>q</b> to go back</text>
+      </box>
+    )
+  }
+
+  if (loading) return <text>Loading...</text>
 
   return (
     <box flexDirection="column" gap={1}>
       <box flexDirection="row" gap={1}>
         <text><b>Conciliations</b></text>
-        <Badge color="cyan">r: run</Badge>
+        <text fg="#58a6ff">[r: run]</text>
       </box>
-      {concs.length === 0 ? (
-        <text fg="#666">No conciliations yet. Press r to run one.</text>
-      ) : (
-        <DataGrid
-          data={flatConcs}
-          columns={[
-            { key: "runAt", header: "Date", width: 24 },
-            { key: "status", header: "Status", width: 12 },
-            { key: "matched", header: "Match", width: 8 },
-            { key: "discrepancies", header: "Diff", width: 8 },
-            { key: "missing", header: "Miss", width: 8 },
-          ]}
-          pageSize={15}
-          onRowSelect={(row: Record<string, unknown>) => {
-            const found = concs.find((c) => c.id === row.id);
-            if (found) viewReport(found.id);
-          }}
-        />
-      )}
-      {running && <Spinner label="Running conciliation..." />}
-      {msg && <Alert variant={msg.startsWith("Error") ? "error" : "info"}>{msg}</Alert>}
-      <text fg="#666">↑↓ navigate · Enter view report · r: run</text>
+
+      {concs.length === 0
+        ? <text fg="#666">No conciliations yet. Press <b>r</b> to run one.</text>
+        : <box flexDirection="column">
+            <box flexDirection="row" gap={1} paddingX={1}>
+              <text width={24} fg="#888"><b>Date</b></text>
+              <text width={12} fg="#888"><b>Status</b></text>
+              <text width={8} fg="#888"><b>Match</b></text>
+              <text width={8} fg="#888"><b>Diff</b></text>
+              <text width={8} fg="#888"><b>Miss</b></text>
+            </box>
+            {concs.map((c, i) => (
+              <box key={c.id} flexDirection="row" gap={1}
+                paddingX={1}
+                backgroundColor={i === selIdx ? "#333" : undefined}>
+                <text width={24}>{new Date(c.runAt).toLocaleDateString()}</text>
+                <text width={12} fg={statusFg(c.status)}>{statusIcon(c.status)} {c.status}</text>
+                <text width={8}>{c.summary.matched}</text>
+                <text width={8}>{c.summary.discrepancies}</text>
+                <text width={8}>{c.summary.missing}</text>
+              </box>
+            ))}
+          </box>
+      }
+
+      {running && <text>Running conciliation...</text>}
+      {msg && <text fg={msg.startsWith("Error") ? "#df2121" : "#58a6ff"}>{msg}</text>}
+      <text fg="#666">↑↓ select · Enter view · <b>r</b>: run</text>
     </box>
-  );
+  )
 }

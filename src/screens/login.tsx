@@ -1,76 +1,72 @@
-import { useState } from "react";
-import { useKeyboard } from "@opentui/react";
-import { Center } from "@/components/ui/center";
-import { Card } from "@/components/ui/card";
-import { Alert } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
-import { Form, useFormContext } from "@/components/ui/form";
-import { FormInput } from "@/components/form-input";
+import { useState } from "react"
+import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
+import { useAuth } from "../hooks/use-auth"
 
-interface LoginScreenProps {
-  onLogin: (email: string, password: string) => Promise<void>;
-  error?: string;
-}
+export function LoginScreen() {
+  const { login } = useAuth()
 
-function LoginForm({ onLogin, error, loading, setLoading }: LoginScreenProps & { loading: boolean; setLoading: (v: boolean) => void }) {
-  const [focused, setFocused] = useState<"email" | "password">("email");
-  const { values } = useFormContext();
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [emailErr, setEmailErr] = useState("")
+  const [passwdErr, setPasswdErr] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [loginErr, setLoginErr] = useState("")
 
-  useKeyboard((key) => {
-    if (key.name === "tab") {
-      setFocused((prev) => (prev === "email" ? "password" : "email"));
+  const isValidEmail = (v: string) => { const i = v.indexOf("@"); return i > 0 && v.slice(i + 1).includes(".") }
+
+  useKeyboardEffect((key) => {
+    if (key.name === "return" || (key.ctrl && key.name === "s")) {
+      if (submitting || !email || !password) return
+      setSubmitting(true); setLoginErr("")
+      login(email, password)
+        .then(() => { setEmail(""); setPassword("") })
+        .catch((e: Error) => setLoginErr(e.message))
+        .finally(() => setSubmitting(false))
     }
-    if (key.name === "return" && focused === "password") {
-      setLoading(true);
-      onLogin(String(values.email ?? ""), String(values.password ?? "")).finally(() => setLoading(false));
-    }
-  });
+  })
 
   return (
-    <Card title="ISC ATM Integrator">
-      <box flexDirection="column" gap={1}>
-        <box flexDirection="column">
-          <text fg="#888"><b>Email</b></text>
-          <FormInput name="email" placeholder="you@example.com" maxLength={100} focused={focused === "email"} onSubmit={() => setFocused("password")} />
+    <box flexGrow={1} borderStyle="rounded" justifyContent="center" alignItems="center">
+      <box borderStyle="rounded" alignItems="center" padding={4} paddingY={1} paddingBottom={1}>
+        <box flexDirection="row">
+          <ascii-font id="t1" text="BAN " font="block" color="#df2121" />
+          <ascii-font id="t2" text="NET" font="block" color="#2c62b3" />
+        </box>
+        <box alignItems="center" marginY={1}>
+          <text><b>SERVICIO DE INTEGRACION FINANCIERO</b></text>
         </box>
         <box flexDirection="column">
-          <text fg="#888"><b>Password</b></text>
-          <FormInput name="password" placeholder="Enter your password" maxLength={100} focused={focused === "password"} />
+          <box flexDirection="column">
+            <box title=" Usuario " borderStyle="rounded" borderColor={emailErr ? "#df2121" : ""} paddingX={1}>
+              <input
+                width={30} placeholder="correo@ejemplo.com" textColor={submitting ? "#555" : "#FFF"}
+                focused={submitting ? false : undefined}
+                onInput={(v: string) => {
+                  setEmail(v)
+                  setEmailErr(v && !isValidEmail(v) ? "Correo inválido" : "")
+                }}
+              />
+            </box>
+            {emailErr && <text marginX={1} fg="#df2121">✗ {emailErr}</text>}
+          </box>
+          <box flexDirection="column">
+            <box title=" Contraseña " borderStyle="rounded" borderColor={passwdErr ? "#df2121" : ""} paddingX={1}>
+              <input
+                width={30} placeholder="••••••••" textColor={submitting ? "#555" : "#FFF"}
+                focused={submitting ? false : undefined}
+                onInput={(v: string) => {
+                  setPassword(v)
+                  setPasswdErr(v.length > 0 && v.length < 6 ? "Mínimo 6 caracteres" : "")
+                }}
+              />
+            </box>
+            {passwdErr && <text marginX={1} fg="#df2121">✗ {passwdErr}</text>}
+          </box>
         </box>
-        {loading && <Spinner label="Logging in..." />}
-        {error && <Alert variant="error">{error}</Alert>}
-        <text fg="#666">Tab between fields · Ctrl+S or Enter to submit</text>
+        {submitting && <text>Ingresando...</text>}
+        {loginErr && <text marginY={1} fg="#df2121">✗ {loginErr}</text>}
+        <text fg="#666">Enter o Ctrl+S para ingresar</text>
       </box>
-    </Card>
-  );
-}
-
-export function LoginScreen({ onLogin, error }: LoginScreenProps) {
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (values: Record<string, unknown>) => {
-    setLoading(true);
-    try {
-      await onLogin(String(values.email ?? ""), String(values.password ?? ""));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Center>
-      <box width={50}>
-        <Form
-          initialValues={{ email: "", password: "" }}
-          fields={[
-            { name: "email", validate: (v) => (v ? null : "Email is required") },
-            { name: "password", validate: (v) => (v ? null : "Password is required") },
-          ]}
-          onSubmit={handleSubmit}
-        >
-          <LoginForm onLogin={onLogin} loading={loading} setLoading={setLoading} error={error} />
-        </Form>
-      </box>
-    </Center>
-  );
+    </box>
+  )
 }

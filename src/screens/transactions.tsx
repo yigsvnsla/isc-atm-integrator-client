@@ -1,106 +1,86 @@
-import { useEffect, useState } from "react";
-import { DataGrid } from "@/components/ui/data-grid";
-import { Pagination } from "@/components/ui/pagination";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { Alert } from "@/components/ui/alert";
-import { api } from "../services/api.js";
+import { useEffect, useState } from "react"
+import { useKeyboardEffect } from "@/hooks/use-keyboard-effect"
+import { api } from "../services/api.js"
 
-interface Transaction {
-  id: string;
-  amount?: number;
-  operation: string;
-  type?: string;
-  state: string;
-  description: string;
-  bankAccountId: string;
-  correlationId?: string;
-  sourceBank: string;
-  createdAt: string;
+interface Tx {
+  id: string; amount?: number; operation: string; state: string
+  sourceBank: string
 }
 
-interface TxResponse {
-  data: Transaction[];
-  metadata: { pagination?: { page: number; limit: number; totalItems: number } };
+interface TxR {
+  data: Tx[]; metadata: { pagination?: { page: number; limit: number; totalItems: number } }
 }
 
-const FILTER_OPTIONS = ["all", "bank_a", "bank_b"];
-const stateColor = (state: string): string => {
-  switch (state) {
-    case "success": return "green";
-    case "pending": return "yellow";
-    default: return "red";
-  }
-};
+const FILTERS = ["all", "bank_a", "bank_b"]
+const statusFg = (s: string) => s === "success" ? "green" : s === "pending" ? "yellow" : "red"
 
 export function TransactionsScreen() {
-  const [txs, setTxs] = useState<Transaction[]>([]);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [filter, setFilter] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Transaction | null>(null);
-  const limit = 10;
+  const [txs, setTxs] = useState<Tx[]>([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [filter, setFilter] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const limit = 10
 
   useEffect(() => {
-    setLoading(true);
-    const params: Record<string, string | number | undefined> = { page, limit };
-    if (filter !== "all") params.sourceBank = filter;
-    api<TxResponse>("transactions", { params })
-      .then((res) => {
-        setTxs(res.data);
-        setTotal(res.metadata?.pagination?.totalItems ?? 0);
-      })
+    setLoading(true)
+    const p: Record<string, string | number | undefined> = { page, limit }
+    if (filter !== "all") p.sourceBank = filter
+    api<TxR>("transactions", { params: p })
+      .then(r => { setTxs(r.data); setTotal(r.metadata?.pagination?.totalItems ?? 0) })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [page, filter]);
+      .finally(() => setLoading(false))
+  }, [page, filter])
 
-  const columns = [
-    { key: "id" as const, header: "ID", width: 10 },
-    { key: "operation" as const, header: "Op", width: 16 },
-    { key: "amount" as const, header: "Amount", width: 10 },
-    { key: "state" as const, header: "State", width: 10 },
-    { key: "sourceBank" as const, header: "Bank", width: 8 },
-  ];
+  useKeyboardEffect((key) => {
+    if (key.name === "n" || key.name === "right") setPage(p => Math.min(p + 1, Math.ceil(total / limit)))
+    if (key.name === "p" || key.name === "left") setPage(p => Math.max(1, p - 1))
+    if (key.name >= "1" && key.name <= "3") {
+      const i = parseInt(key.name) - 1
+      if (i < FILTERS.length) { setFilter(FILTERS[i]); setPage(1) }
+    }
+  })
 
-  if (loading) return <Spinner label="Loading transactions..." />;
+  if (loading) return <text>Loading transactions...</text>
 
-  const totalPages = Math.ceil(total / limit);
-  const flatTxs: Array<Record<string, unknown>> = txs.map((tx) => ({
-    id: tx.id.slice(0, 8),
-    operation: tx.operation,
-    amount: tx.amount != null ? `$${(tx.amount / 100).toFixed(2)}` : "-",
-    state: tx.state,
-    sourceBank: tx.sourceBank,
-  }));
+  const pages = Math.ceil(total / limit)
 
   return (
     <box flexDirection="column" gap={1}>
-      <box flexDirection="row" gap={1}>
-        <text><b>Transactions</b></text>
-        {FILTER_OPTIONS.map((f) => (
-          <Badge key={f} color={filter === f ? "cyan" : undefined}>
-            {f === "all" ? "All" : f}
-          </Badge>
+      <text><b>Transactions</b></text>
+
+      <box flexDirection="row" gap={2}>
+        {FILTERS.map((f, i) => (
+          <text key={f} fg={filter === f ? "#58a6ff" : "#888"}>
+            [{i + 1}] {f === "all" ? "All" : f}
+          </text>
         ))}
       </box>
-      {selected && (
-        <Alert variant="info">
-          Selected: {selected.id.slice(0, 8)}.. | {selected.operation} | $
-          {(selected.amount ?? 0) / 100}
-        </Alert>
-      )}
-      <DataGrid
-        data={flatTxs}
-        columns={columns}
-        pageSize={limit}
-        onRowSelect={(row) => {
-          const found = txs.find((tx) => tx.id.startsWith(String(row.id)));
-          if (found) setSelected(found);
-        }}
-      />
-      <Pagination total={totalPages} current={page} onChange={setPage} />
-      <text fg="#666">↑↓ navigate · Enter select · p/n page</text>
+
+      <box flexDirection="column">
+        <box flexDirection="row" gap={1} paddingX={1}>
+          <text width={18} fg="#888"><b>Operation</b></text>
+          <text width={10} fg="#888"><b>Amount</b></text>
+          <text width={10} fg="#888"><b>State</b></text>
+          <text width={8} fg="#888"><b>Bank</b></text>
+        </box>
+        {txs.slice(0, limit).map(tx => (
+          <box key={tx.id} flexDirection="row" gap={1} paddingX={1}>
+            <text width={18}>{tx.operation}</text>
+            <text width={10}>{tx.amount != null ? `$${(tx.amount / 100).toFixed(2)}` : "-"}</text>
+            <text width={10} fg={statusFg(tx.state)}>{tx.state}</text>
+            <text width={8}>{tx.sourceBank}</text>
+          </box>
+        ))}
+      </box>
+
+      <box flexDirection="row" gap={1}>
+        <text fg="#666">{'<'}</text>
+        <text>Page {page} / {pages}</text>
+        <text fg="#666">{'>'}</text>
+      </box>
+
+      <text fg="#666">[p] prev · [n] next · [1-3] filter</text>
     </box>
-  );
+  )
 }
